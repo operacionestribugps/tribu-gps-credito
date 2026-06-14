@@ -188,7 +188,7 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
   <div class="eyebrow">Solicitud de Crédito</div>
   <div class="step-title">Cuéntanos sobre ti</div>
   <div class="step-sub">Tus datos están protegidos. Solo los revisa el equipo Tribu GPS.</div>
-  <div class="intro-pill"><span style="font-size:18px;flex-shrink:0;margin-top:1px">⚡</span><div class="ip-text">Financiamos vehículos eléctricos con <strong>pagos quincenales</strong>..</div></div>
+  <div class="intro-pill"><span style="font-size:18px;flex-shrink:0;margin-top:1px">⚡</span><div class="ip-text">Financiamos vehículos eléctricos con <strong>pagos quincenales</strong>. GPS instalado en el vehículo como respaldo del crédito.</div></div>
   <div class="fi"><label>Nombre completo</label><input id="nombre" placeholder="Ej: Juan Carlos Pérez García" type="text" autocomplete="name"><div class="err" id="err-nombre">Escribe tu nombre completo.</div></div>
   <div class="fi-row">
     <div class="fi"><label>Cédula</label><input id="cedula" placeholder="1012345678" type="number"><div class="err" id="err-cedula">Ingresa tu cédula.</div></div>
@@ -271,7 +271,8 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
   </div></div>
 
   <div class="q-block" id="qb6"><div class="q-tag">Pregunta 06</div><div class="q-lbl">¿Cuál es tu situación de vivienda?</div><div class="q-opts">
-    <div class="opt" onclick="setQ('residence','own',10,this,6)"><div class="opt-radio"></div><span class="opt-text">Propia o familiar estable hace más de 2 años</span></div>
+    <div class="opt" onclick="setQ('residence','own_prop',10,this,6)"><div class="opt-radio"></div><span class="opt-text">Propia — eres propietario(a) del inmueble</span></div>
+    <div class="opt" onclick="setQ('residence','own_family',8,this,6)"><div class="opt-radio"></div><span class="opt-text">Familiar estable — vives con familia hace más de 2 años</span></div>
     <div class="opt" onclick="setQ('residence','rent_1y',7,this,6)"><div class="opt-radio"></div><span class="opt-text">Arriendo hace más de 1 año en la misma dirección</span></div>
     <div class="opt" onclick="setQ('residence','rent_6m',4,this,6)"><div class="opt-radio"></div><span class="opt-text">Arriendo hace menos de 1 año</span></div>
     <div class="opt" onclick="setQ('residence','mobile',0,this,6)"><div class="opt-radio"></div><span class="opt-text">Sin dirección fija</span></div>
@@ -352,9 +353,8 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
   <div class="conf-sub">El equipo Tribu GPS verificará tus documentos en las próximas 24–48 horas y te contactará por WhatsApp.</div>
   <div class="conf-id-box"><div class="conf-id-lbl">Tu ID de solicitud</div><div class="conf-id-val" id="conf-id">TG-2025-—</div></div>
   <div class="conf-cards">
-    <div class="conf-card"><span class="cc-lbl">Cuota quincenal estimada</span><span class="cc-val gold" id="conf-cuota">—</span></div>
-    <div class="conf-card"><span class="cc-lbl">Primera cuota</span><span class="cc-val" id="conf-c1">—</span></div>
-    <div class="conf-card"><span class="cc-lbl">Plazo</span><span class="cc-val">24 quincenas · 12 meses</span></div>
+    <div class="conf-card" style="border-color:rgba(224,144,24,.3);background:rgba(224,144,24,.06)"><span class="cc-lbl">Estado de tu solicitud</span><span class="cc-val gold">En evaluación</span></div>
+    <div class="conf-card"><span class="cc-lbl">Tiempo de respuesta</span><span class="cc-val">24–48 horas hábiles</span></div>
   </div>
   <div class="next-block">
     <div class="nb-tag">Próximos pasos</div>
@@ -394,7 +394,15 @@ function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var 
 function getTotal(){return['income_gross','income_net','quincenal','employment','debts','residence','references'].reduce(function(s,k){return s+(scoreData[k]?scoreData[k].pts:0);},0);}
 function fileSelected(wId,iId,nId){var f=document.getElementById(iId).files[0];if(f){document.getElementById(wId).classList.add('has-file');document.getElementById(nId).textContent='✓ '+f.name;}}
 async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});fd.append('vehiculo_monto',document.getElementById('vehiculo').value);fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{setLoadMsg('CREANDO TU CARPETA EN DRIVE...');var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd});if(!res.ok)throw new Error('HTTP '+res.status);var result=await res.json().catch(function(){return{};});hideLoad();showConf(result);}catch(err){hideLoad();showConf({});console.error(err);}}
-function showConf(result){var veh=parseInt(document.getElementById('vehiculo').value)||3500000;var creditId=result.creditId||('TG-2025-'+String(Math.floor(Math.random()*900)+100));var tP=Math.pow(1.55,1/26)-1;var cuota=veh*(tP*Math.pow(1+tP,24))/(Math.pow(1+tP,24)-1);var gpsPer=Math.round(660000/24);var aprob=Math.round((50000+(55-30)/(63.9-30)*100000)/5000)*5000;var cuotaQ=Math.round(cuota+gpsPer);var cuota1=cuotaQ+aprob;for(var i=1;i<=3;i++){var s=document.getElementById('s'+i);if(s)s.classList.remove('active');}document.getElementById('btn-row').style.display='none';var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';var conf=document.getElementById('conf');conf.classList.add('active');conf.style.display='block';document.getElementById('conf-id').textContent=creditId;document.getElementById('conf-cuota').textContent='$'+cuotaQ.toLocaleString('es-CO')+' / quincena';document.getElementById('conf-c1').textContent='$'+cuota1.toLocaleString('es-CO');window.scrollTo(0,0);}
+function showConf(result){
+  var creditId=result.creditId||('TG-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*900)+100));
+  for(var i=1;i<=3;i++){var s=document.getElementById('s'+i);if(s)s.classList.remove('active');}
+  document.getElementById('btn-row').style.display='none';
+  var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';
+  var conf=document.getElementById('conf');conf.classList.add('active');conf.style.display='block';
+  document.getElementById('conf-id').textContent=creditId;
+  window.scrollTo(0,0);
+}
 function openWA(){var n=document.getElementById('nombre').value||'';var msg=encodeURIComponent('Hola Tribu GPS, acabo de enviar mi solicitud de crédito. Mi nombre es '+n+'. ¿Cuándo me dan respuesta?');window.open('https://wa.me/'+WA_NUMBER+'?text='+msg,'_blank');}
 function showLoad(m){document.getElementById('loading').classList.add('on');document.getElementById('load-msg').textContent=m;}
 function setLoadMsg(m){document.getElementById('load-msg').textContent=m;}
