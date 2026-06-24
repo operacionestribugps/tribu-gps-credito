@@ -202,16 +202,9 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
   </div>
   <div class="divider"></div>
   <div class="fi">
-    <label>¿Cuánto vale el vehículo que te interesa?</label>
-    <select id="vehiculo">
-      <option value="" disabled selected>Selecciona un rango de precio</option>
-      <option value="1500000">Entre $1.000.000 y $1.999.999</option>
-      <option value="2500000">Entre $2.000.000 y $2.999.999</option>
-      <option value="3500000">Entre $3.000.000 y $3.999.999</option>
-      <option value="4500000">Entre $4.000.000 y $4.999.999</option>
-      <option value="5500000">Más de $5.000.000 (máx. $5.500.000)</option>
-    </select>
-    <div class="err" id="err-vehiculo">Selecciona el rango de precio.</div>
+    <label>Valor exacto del vehículo (COP)</label>
+    <input id="vehiculo" type="number" placeholder="Ej: 4500000" min="500000" step="10000">
+    <div class="err" id="err-vehiculo">Ingresa el valor exacto del vehículo.</div>
   </div>
   <div class="fi">
     <label>¿Para qué lo usarás?</label>
@@ -388,7 +381,7 @@ function goNext(){if(curStep===1){if(!val1())return;goTo(2);}else if(curStep===2
 function goBack(){if(curStep>1)goTo(curStep-1);}
 function goTo(n){document.getElementById('s'+curStep).classList.remove('active');curStep=n;var el=n<4?document.getElementById('s'+n):document.getElementById('conf');if(el)el.classList.add('active');updateUI();window.scrollTo(0,0);}
 function updateUI(){var labels=['','DATOS PERSONALES','EVALUACIÓN','DOCUMENTACIÓN'];var steps=['','PASO 01 / 03','PASO 02 / 03','PASO 03 / 03'];for(var i=1;i<=3;i++){var p=document.getElementById('pb'+i);if(p)p.className='pb'+(i<curStep?' done':i===curStep?' active':'');}document.getElementById('prog-step').textContent=steps[curStep]||'';document.getElementById('prog-name').textContent=labels[curStep]||'';var bb=document.getElementById('btn-back');if(bb)bb.style.display=curStep>1&&curStep<4?'block':'none';var bn=document.getElementById('btn-next');if(bn)bn.textContent=curStep===3?'Enviar solicitud →':'Continuar →';if(curStep>=4){var br=document.getElementById('btn-row');if(br)br.style.display='none';var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';}}
-function val1(){var ok=true;[['nombre','err-nombre'],['cedula','err-cedula'],['telefono','err-tel']].forEach(function(c){var v=document.getElementById(c[0]).value.trim();var e=document.getElementById(c[1]);if(!v){e.classList.add('on');ok=false;}else{e.classList.remove('on');}});var emailVal=document.getElementById('email').value.trim();var emailErr=document.getElementById('err-email');var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);if(!emailOk){emailErr.textContent=emailVal?'Ese correo no se ve válido — revísalo.':'Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.';emailErr.classList.add('on');ok=false;}else{emailErr.classList.remove('on');}var veh=document.getElementById('vehiculo').value;var ev=document.getElementById('err-vehiculo');if(!veh){ev.classList.add('on');ok=false;}else{ev.classList.remove('on');}return ok;}
+function val1(){var ok=true;[['nombre','err-nombre'],['cedula','err-cedula'],['telefono','err-tel']].forEach(function(c){var v=document.getElementById(c[0]).value.trim();var e=document.getElementById(c[1]);if(!v){e.classList.add('on');ok=false;}else{e.classList.remove('on');}});var emailVal=document.getElementById('email').value.trim();var emailErr=document.getElementById('err-email');var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);if(!emailOk){emailErr.textContent=emailVal?'Ese correo no se ve válido — revísalo.':'Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.';emailErr.classList.add('on');ok=false;}else{emailErr.classList.remove('on');}var veh=parseInt(document.getElementById('vehiculo').value)||0;var ev=document.getElementById('err-vehiculo');if(veh<500000){ev.classList.add('on');ok=false;}else{ev.classList.remove('on');}return ok;}
 function setQ(key,val,pts,el,di){el.closest('.q-block').querySelectorAll('.opt').forEach(function(o){o.classList.remove('sel');});el.classList.add('sel');el.closest('.q-block').classList.add('answered');var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};if(isNew)answeredCount++;updateDots();}
 function setYN(key,val,pts){var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};document.getElementById('yn3-si').className='yn-opt'+(val==='si'?' sel-yes':'');document.getElementById('yn3-no').className='yn-opt'+(val==='no'?' sel-no':'');document.getElementById('qb3').classList.add('answered');if(!scoreData._yn3){scoreData._yn3=true;answeredCount++;}updateDots();}
 function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var d=document.getElementById('qd'+i);if(d)d.classList.toggle('filled',i<=t);}document.getElementById('qp-lbl').textContent=t+' DE 7 PREGUNTAS';}
@@ -411,3 +404,8 @@ function hideLoad(){document.getElementById('loading').classList.remove('on');}
 </script>
 </body>
 </html>
+
+
+
+
+
