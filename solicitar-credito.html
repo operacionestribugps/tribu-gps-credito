@@ -214,6 +214,14 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
       <option value="negocio">Negocio propio</option>
     </select>
   </div>
+  <div class="fi">
+    <label>¿Cómo prefieres pagar tu crédito?</label>
+    <select id="periodicidad">
+      <option value="quincenal">Quincenal — 24 pagos en 12 meses</option>
+      <option value="mensual">Mensual — 12 pagos en 12 meses</option>
+    </select>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">Quincenal: cuotas más pequeñas, pagas cada 15 días. Mensual: cuotas más grandes, pagas una vez al mes.</div>
+  </div>
 </div>
 
 <!-- ══ STEP 2 ══ -->
@@ -387,7 +395,7 @@ function setYN(key,val,pts){var isNew=!scoreData[key];scoreData[key]={val:val,pt
 function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var d=document.getElementById('qd'+i);if(d)d.classList.toggle('filled',i<=t);}document.getElementById('qp-lbl').textContent=t+' DE 7 PREGUNTAS';}
 function getTotal(){return['income_gross','income_net','quincenal','employment','debts','residence','references'].reduce(function(s,k){return s+(scoreData[k]?scoreData[k].pts:0);},0);}
 function fileSelected(wId,iId,nId){var f=document.getElementById(iId).files[0];if(f){document.getElementById(wId).classList.add('has-file');document.getElementById(nId).textContent='✓ '+f.name;}}
-async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});fd.append('vehiculo_monto',document.getElementById('vehiculo').value);fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{setLoadMsg('CREANDO TU CARPETA EN DRIVE...');var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd});if(!res.ok)throw new Error('HTTP '+res.status);var result=await res.json().catch(function(){return{};});hideLoad();showConf(result);}catch(err){hideLoad();showConf({});console.error(err);}}
+async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});fd.append('vehiculo_monto',document.getElementById('vehiculo').value);fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{setLoadMsg('CREANDO TU CARPETA EN DRIVE...');var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd});if(!res.ok)throw new Error('HTTP '+res.status);var result=await res.json().catch(function(){return{};});hideLoad();showConf(result);}catch(err){hideLoad();showConf({});console.error(err);}}
 function showConf(result){
   var creditId=result.creditId||('TG-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*900)+100));
   for(var i=1;i<=3;i++){var s=document.getElementById('s'+i);if(s)s.classList.remove('active');}
@@ -404,8 +412,3 @@ function hideLoad(){document.getElementById('loading').classList.remove('on');}
 </script>
 </body>
 </html>
-
-
-
-
-
