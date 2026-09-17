@@ -7,6 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#080D14">
 <style>
+/* Aviso de cuota inicial: el credito financia hasta un tope, asi que si
+   el vehiculo vale mas, el cliente debe cubrir la diferencia. Se muestra
+   en vivo mientras escribe, no al enviar -- asi no llena todo el
+   formulario para enterarse al final. */
+.aviso-inicial{display:none;margin-top:9px;padding:11px 13px;border-radius:9px;
+  background:rgba(242,107,69,.09);border:1px solid rgba(242,107,69,.3);
+  font-size:12.5px;line-height:1.6;color:#F0F3F6;}
+.aviso-inicial.on{display:block;}
+.aviso-inicial b{color:#F26B45;}
+
 /* ===== VAMO · BRAND CONFIG =========================================
    Toda la identidad vive en estas variables. Para publicar la misma
    plataforma con la marca de un comercializador, se cambian SOLO
@@ -171,9 +181,23 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
 .wa-btn{width:100%;padding:14px;background:#25D366;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
 .wa-btn:hover{background:#1ebe58;transform:translateY(-1px);}
 @media(max-width:360px){.cedula-pair{grid-template-columns:1fr;}}
+
+/* Volver al inicio. Flotante arriba-izquierda: no compite con el
+   contenido y queda igual en todas las paginas del ecosistema. */
+.btn-inicio{position:fixed;top:14px;left:14px;z-index:150;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 13px;border-radius:20px;text-decoration:none;
+  background:rgba(13,20,29,.82);border:1px solid rgba(255,255,255,.12);
+  color:#8593A2;font-family:'Roboto',sans-serif;font-size:11.5px;font-weight:500;
+  backdrop-filter:blur(8px);transition:all .2s;}
+.btn-inicio:hover{color:#F26B45;border-color:rgba(242,107,69,.4);}
+.btn-inicio span{font-size:13px;line-height:1;}
+@media (max-width:420px){.btn-inicio{font-size:10.5px;padding:7px 11px;}}
 </style>
 </head>
 <body>
+<a class="btn-inicio" href="https://tribu-gps-credito.vercel.app/" aria-label="Volver al inicio"><span>←</span> Inicio</a>
+
 <div class="shell">
 
 <!-- HERO CON LOGO PROMINENTE -->
@@ -212,6 +236,7 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
     <label>Valor exacto del vehículo (COP)</label>
     <input id="vehiculo" type="number" placeholder="Ej: 4500000" min="500000" step="10000">
     <div class="err" id="err-vehiculo">Ingresa el valor exacto del vehículo.</div>
+    <div class="aviso-inicial" id="aviso-inicial"></div>
   </div>
   <div class="fi">
     <label>¿Para qué lo usarás?</label>
@@ -396,7 +421,35 @@ function goNext(){if(curStep===1){if(!val1())return;goTo(2);}else if(curStep===2
 function goBack(){if(curStep>1)goTo(curStep-1);}
 function goTo(n){document.getElementById('s'+curStep).classList.remove('active');curStep=n;var el=n<4?document.getElementById('s'+n):document.getElementById('conf');if(el)el.classList.add('active');updateUI();window.scrollTo(0,0);}
 function updateUI(){var labels=['','DATOS PERSONALES','EVALUACIÓN','DOCUMENTACIÓN'];var steps=['','PASO 01 / 03','PASO 02 / 03','PASO 03 / 03'];for(var i=1;i<=3;i++){var p=document.getElementById('pb'+i);if(p)p.className='pb'+(i<curStep?' done':i===curStep?' active':'');}document.getElementById('prog-step').textContent=steps[curStep]||'';document.getElementById('prog-name').textContent=labels[curStep]||'';var bb=document.getElementById('btn-back');if(bb)bb.style.display=curStep>1&&curStep<4?'block':'none';var bn=document.getElementById('btn-next');if(bn)bn.textContent=curStep===3?'Enviar solicitud →':'Continuar →';if(curStep>=4){var br=document.getElementById('btn-row');if(br)br.style.display='none';var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';}}
-function val1(){var ok=true;[['nombre','err-nombre'],['cedula','err-cedula'],['telefono','err-tel']].forEach(function(c){var v=document.getElementById(c[0]).value.trim();var e=document.getElementById(c[1]);if(!v){e.classList.add('on');ok=false;}else{e.classList.remove('on');}});var emailVal=document.getElementById('email').value.trim();var emailErr=document.getElementById('err-email');var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);if(!emailOk){emailErr.textContent=emailVal?'Ese correo no se ve válido — revísalo.':'Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.';emailErr.classList.add('on');ok=false;}else{emailErr.classList.remove('on');}var veh=parseInt(document.getElementById('vehiculo').value)||0;var ev=document.getElementById('err-vehiculo');if(veh<500000){ev.classList.add('on');ok=false;}else{ev.classList.remove('on');}return ok;}
+// Tope de financiacion. Por encima de esto el cliente debe poner cuota
+// inicial por la diferencia.
+var TOPE_FINANCIABLE = 5500000;
+
+function fmtCOP(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
+
+function revisarMonto(){
+  var veh = parseInt(document.getElementById('vehiculo').value) || 0;
+  var aviso = document.getElementById('aviso-inicial');
+  if (veh > TOPE_FINANCIABLE) {
+    var inicial = veh - TOPE_FINANCIABLE;
+    aviso.innerHTML =
+      'Financiamos hasta <b>' + fmtCOP(TOPE_FINANCIABLE) + '</b> por vehículo. ' +
+      'Para este de ' + fmtCOP(veh) + ' necesitas una cuota inicial de <b>' +
+      fmtCOP(inicial) + '</b>, y nosotros financiamos el resto.';
+    aviso.classList.add('on');
+  } else {
+    aviso.classList.remove('on');
+  }
+}
+
+document.getElementById('vehiculo').addEventListener('input', revisarMonto);
+
+function val1(){var ok=true;[['nombre','err-nombre'],['cedula','err-cedula'],['telefono','err-tel']].forEach(function(c){var v=document.getElementById(c[0]).value.trim();var e=document.getElementById(c[1]);if(!v){e.classList.add('on');ok=false;}else{e.classList.remove('on');}});var emailVal=document.getElementById('email').value.trim();var emailErr=document.getElementById('err-email');var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);if(!emailOk){emailErr.textContent=emailVal?'Ese correo no se ve válido — revísalo.':'Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.';emailErr.classList.add('on');ok=false;}else{emailErr.classList.remove('on');}var veh=parseInt(document.getElementById('vehiculo').value)||0;var ev=document.getElementById('err-vehiculo');
+if(veh<500000){ev.textContent='Ingresa el valor exacto del vehículo.';ev.classList.add('on');ok=false;}
+else if(veh>TOPE_FINANCIABLE){ev.textContent='Supera el máximo financiable de '+fmtCOP(TOPE_FINANCIABLE)+'. Descuenta tu cuota inicial e ingresa el valor a financiar.';ev.classList.add('on');ok=false;}
+else{ev.classList.remove('on');}
+revisarMonto();
+return ok;}
 function setQ(key,val,pts,el,di){el.closest('.q-block').querySelectorAll('.opt').forEach(function(o){o.classList.remove('sel');});el.classList.add('sel');el.closest('.q-block').classList.add('answered');var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};if(isNew)answeredCount++;updateDots();}
 function setYN(key,val,pts){var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};document.getElementById('yn3-si').className='yn-opt'+(val==='si'?' sel-yes':'');document.getElementById('yn3-no').className='yn-opt'+(val==='no'?' sel-no':'');document.getElementById('qb3').classList.add('answered');if(!scoreData._yn3){scoreData._yn3=true;answeredCount++;}updateDots();}
 function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var d=document.getElementById('qd'+i);if(d)d.classList.toggle('filled',i<=t);}document.getElementById('qp-lbl').textContent=t+' DE 7 PREGUNTAS';}
