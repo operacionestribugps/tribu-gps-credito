@@ -7,6 +7,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#080D14">
 <style>
+/* Resumen de financiacion, desglosado en vivo. */
+.resumen-fin{display:none;margin:-4px 0 18px;padding:13px 15px;border-radius:11px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);}
+.resumen-fin.on{display:block;}
+.rf-row{display:flex;justify-content:space-between;align-items:center;
+  font-size:12.5px;color:#8593A2;padding:5px 0;}
+.rf-row b{color:#F0F3F6;font-weight:600;}
+.rf-row.rf-total{border-top:1px solid rgba(255,255,255,.09);margin-top:5px;padding-top:9px;}
+.rf-row.rf-total span{color:#F0F3F6;font-weight:500;}
+.rf-row.rf-total b{color:#F26B45;font-size:15px;font-weight:900;}
+
 /* Aviso de cuota inicial: el credito financia hasta un tope, asi que si
    el vehiculo vale mas, el cliente debe cubrir la diferencia. Se muestra
    en vivo mientras escribe, no al enviar -- asi no llena todo el
@@ -233,10 +244,30 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
   </div>
   <div class="divider"></div>
   <div class="fi">
-    <label>Valor exacto del vehículo (COP)</label>
+    <label>Valor comercial del vehículo (COP)</label>
     <input id="vehiculo" type="number" placeholder="Ej: 4500000" min="500000" step="10000">
-    <div class="err" id="err-vehiculo">Ingresa el valor exacto del vehículo.</div>
+    <div class="err" id="err-vehiculo">Ingresa el valor del vehículo.</div>
     <div class="aviso-inicial" id="aviso-inicial"></div>
+  </div>
+
+  <!-- Resumen de financiacion: aparece solo cuando ya hay un valor.
+       Se muestra desglosado para que el cliente vea de una vez cuanto
+       pone el y cuanto financiamos nosotros, sin sorpresas al final. -->
+  <div class="resumen-fin" id="resumen-fin">
+    <div class="rf-row"><span>Valor del vehículo</span><b id="rf-valor">$0</b></div>
+    <div class="rf-row" id="rf-row-inicial"><span>Tu cuota inicial</span><b id="rf-inicial">$0</b></div>
+    <div class="rf-row rf-total"><span>Financiamos</span><b id="rf-financiar">$0</b></div>
+  </div>
+
+  <div class="fi">
+    <label>Marca y modelo del vehículo</label>
+    <input id="modelo" placeholder="Ej: Starker Nitro 2024">
+    <div class="err" id="err-modelo">Cuéntanos qué vehículo es.</div>
+  </div>
+  <div class="fi">
+    <label>Punto de venta o tienda</label>
+    <input id="concesionario" placeholder="¿Dónde lo estás comprando?">
+    <div class="err" id="err-concesionario">Indícanos dónde lo compras.</div>
   </div>
   <div class="fi">
     <label>¿Para qué lo usarás?</label>
@@ -427,15 +458,39 @@ var TOPE_FINANCIABLE = 5500000;
 
 function fmtCOP(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
 
+// Devuelve el desglose de la financiacion para un valor de vehiculo.
+// Se calcula aqui una sola vez y lo usan tanto el resumen como el envio,
+// para que no haya dos formulas que puedan desincronizarse.
+function desglose(valorVehiculo){
+  var inicial   = Math.max(0, valorVehiculo - TOPE_FINANCIABLE);
+  var financiar = Math.min(valorVehiculo, TOPE_FINANCIABLE);
+  return { valor: valorVehiculo, inicial: inicial, financiar: financiar };
+}
+
 function revisarMonto(){
-  var veh = parseInt(document.getElementById('vehiculo').value) || 0;
+  var veh   = parseInt(document.getElementById('vehiculo').value) || 0;
   var aviso = document.getElementById('aviso-inicial');
-  if (veh > TOPE_FINANCIABLE) {
-    var inicial = veh - TOPE_FINANCIABLE;
+  var res   = document.getElementById('resumen-fin');
+
+  if (veh < 500000) {
+    aviso.classList.remove('on');
+    res.classList.remove('on');
+    return;
+  }
+
+  var d = desglose(veh);
+
+  document.getElementById('rf-valor').textContent     = fmtCOP(d.valor);
+  document.getElementById('rf-inicial').textContent   = fmtCOP(d.inicial);
+  document.getElementById('rf-financiar').textContent = fmtCOP(d.financiar);
+  // La fila de cuota inicial solo tiene sentido si hay algo que pagar
+  document.getElementById('rf-row-inicial').style.display = d.inicial > 0 ? 'flex' : 'none';
+  res.classList.add('on');
+
+  if (d.inicial > 0) {
     aviso.innerHTML =
       'Financiamos hasta <b>' + fmtCOP(TOPE_FINANCIABLE) + '</b> por vehículo. ' +
-      'Para este de ' + fmtCOP(veh) + ' necesitas una cuota inicial de <b>' +
-      fmtCOP(inicial) + '</b>, y nosotros financiamos el resto.';
+      'Para este necesitas una cuota inicial de <b>' + fmtCOP(d.inicial) + '</b>.';
     aviso.classList.add('on');
   } else {
     aviso.classList.remove('on');
@@ -445,9 +500,16 @@ function revisarMonto(){
 document.getElementById('vehiculo').addEventListener('input', revisarMonto);
 
 function val1(){var ok=true;[['nombre','err-nombre'],['cedula','err-cedula'],['telefono','err-tel']].forEach(function(c){var v=document.getElementById(c[0]).value.trim();var e=document.getElementById(c[1]);if(!v){e.classList.add('on');ok=false;}else{e.classList.remove('on');}});var emailVal=document.getElementById('email').value.trim();var emailErr=document.getElementById('err-email');var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);if(!emailOk){emailErr.textContent=emailVal?'Ese correo no se ve válido — revísalo.':'Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.';emailErr.classList.add('on');ok=false;}else{emailErr.classList.remove('on');}var veh=parseInt(document.getElementById('vehiculo').value)||0;var ev=document.getElementById('err-vehiculo');
-if(veh<500000){ev.textContent='Ingresa el valor exacto del vehículo.';ev.classList.add('on');ok=false;}
-else if(veh>TOPE_FINANCIABLE){ev.textContent='Supera el máximo financiable de '+fmtCOP(TOPE_FINANCIABLE)+'. Descuenta tu cuota inicial e ingresa el valor a financiar.';ev.classList.add('on');ok=false;}
+if(veh<500000){ev.textContent='Ingresa el valor del vehículo.';ev.classList.add('on');ok=false;}
 else{ev.classList.remove('on');}
+// Modelo y punto de venta: van en la carta de pre-aprobacion, por eso
+// se piden desde el formulario y no despues.
+var mod=document.getElementById('modelo').value.trim();
+var em=document.getElementById('err-modelo');
+if(!mod){em.classList.add('on');ok=false;}else{em.classList.remove('on');}
+var con=document.getElementById('concesionario').value.trim();
+var ec=document.getElementById('err-concesionario');
+if(!con){ec.classList.add('on');ok=false;}else{ec.classList.remove('on');}
 revisarMonto();
 return ok;}
 function setQ(key,val,pts,el,di){el.closest('.q-block').querySelectorAll('.opt').forEach(function(o){o.classList.remove('sel');});el.classList.add('sel');el.closest('.q-block').classList.add('answered');var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};if(isNew)answeredCount++;updateDots();}
@@ -455,7 +517,16 @@ function setYN(key,val,pts){var isNew=!scoreData[key];scoreData[key]={val:val,pt
 function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var d=document.getElementById('qd'+i);if(d)d.classList.toggle('filled',i<=t);}document.getElementById('qp-lbl').textContent=t+' DE 7 PREGUNTAS';}
 function getTotal(){return['income_gross','income_net','quincenal','employment','debts','residence','references'].reduce(function(s,k){return s+(scoreData[k]?scoreData[k].pts:0);},0);}
 function fileSelected(wId,iId,nId){var f=document.getElementById(iId).files[0];if(f){document.getElementById(wId).classList.add('has-file');document.getElementById(nId).textContent='✓ '+f.name;}}
-async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});fd.append('vehiculo_monto',document.getElementById('vehiculo').value);fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{setLoadMsg('CREANDO TU CARPETA EN DRIVE...');var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd});if(!res.ok)throw new Error('HTTP '+res.status);var result=await res.json().catch(function(){return{};});hideLoad();showConf(result);}catch(err){hideLoad();showConf({});console.error(err);}}
+async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});var _d=desglose(parseInt(document.getElementById('vehiculo').value)||0);
+// vehiculo_monto = lo que FINANCIAMOS (topado). El valor comercial y la
+// cuota inicial viajan aparte para que queden registrados y salgan en la
+// carta de pre-aprobacion.
+fd.append('vehiculo_monto',_d.financiar);
+fd.append('vehiculo_valor_comercial',_d.valor);
+fd.append('cuota_inicial',_d.inicial);
+fd.append('vehiculo_modelo',document.getElementById('modelo').value.trim());
+fd.append('concesionario',document.getElementById('concesionario').value.trim());
+fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{setLoadMsg('CREANDO TU CARPETA EN DRIVE...');var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd});if(!res.ok)throw new Error('HTTP '+res.status);var result=await res.json().catch(function(){return{};});hideLoad();showConf(result);}catch(err){hideLoad();showConf({});console.error(err);}}
 function showConf(result){
   var creditId=result.creditId||('TG-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*900)+100));
   for(var i=1;i<=3;i++){var s=document.getElementById('s'+i);if(s)s.classList.remove('active');}
