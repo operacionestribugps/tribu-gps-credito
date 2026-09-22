@@ -526,15 +526,64 @@ fd.append('vehiculo_valor_comercial',_d.valor);
 fd.append('cuota_inicial',_d.inicial);
 fd.append('vehiculo_modelo',document.getElementById('modelo').value.trim());
 fd.append('concesionario',document.getElementById('concesionario').value.trim());
-fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{setLoadMsg('CREANDO TU CARPETA EN DRIVE...');var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd});if(!res.ok)throw new Error('HTTP '+res.status);var result=await res.json().catch(function(){return{};});hideLoad();showConf(result);}catch(err){hideLoad();showConf({});console.error(err);}}
+fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{
+setLoadMsg('ENVIANDO TU SOLICITUD...');
+// Tiempo maximo de espera. Si el servidor no responde, se avisa en vez
+// de dejar al cliente mirando la pantalla de carga indefinidamente.
+var ctrl=new AbortController();
+var tmo=setTimeout(function(){ctrl.abort();},90000);
+var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd,signal:ctrl.signal});
+clearTimeout(tmo);
+if(!res.ok)throw new Error('HTTP '+res.status);
+var result=await res.json().catch(function(){return{};});
+// Solo es exito si el servidor devuelve un ID real.
+if(!result||!result.creditId)throw new Error('Respuesta sin ID de credito');
+hideLoad();
+showConf(result);
+}catch(err){
+hideLoad();
+console.error(err);
+showError(err&&err.name==='AbortError');
+}}
 function showConf(result){
-  var creditId=result.creditId||('TG-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*900)+100));
+  // Solo se muestra un ID que el servidor haya confirmado. Antes, si el
+  // envio fallaba, se INVENTABA uno aleatorio (TG-2026-100 a 999) y se
+  // le mostraba al cliente como real: el cliente creia que habia
+  // aplicado y el lead nunca llegaba.
+  var creditId=result.creditId;
   for(var i=1;i<=3;i++){var s=document.getElementById('s'+i);if(s)s.classList.remove('active');}
   document.getElementById('btn-row').style.display='none';
   var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';
   var conf=document.getElementById('conf');conf.classList.add('active');conf.style.display='block';
   document.getElementById('conf-id').textContent=creditId;
   window.scrollTo(0,0);
+}
+function showError(fueTimeout){
+  var msg = fueTimeout
+    ? 'Tu solicitud está tardando más de lo normal y no pudimos confirmarla.'
+    : 'No pudimos registrar tu solicitud.';
+  var box=document.getElementById('err-envio');
+  if(!box){
+    box=document.createElement('div');
+    box.id='err-envio';
+    box.style.cssText='margin:18px 0;padding:16px 18px;border-radius:12px;'+
+      'background:rgba(224,92,92,.1);border:1px solid rgba(224,92,92,.35);'+
+      'color:#F0F3F6;font-size:13.5px;line-height:1.6;';
+    var btn=document.getElementById('btn-row');
+    if(btn&&btn.parentNode)btn.parentNode.insertBefore(box,btn);
+    else document.body.appendChild(box);
+  }
+  // Los datos que ya lleno quedan en el formulario: puede reintentar
+  // sin volver a escribir todo. Y si falla de nuevo, tiene WhatsApp.
+  box.innerHTML='<b style="color:#E05C5C">'+msg+'</b><br>'+
+    'Tus datos siguen en el formulario. Intenta enviarlo de nuevo en unos minutos. '+
+    'Si el problema continúa, escríbenos por WhatsApp y te ayudamos a completarla.'+
+    '<br><br><a href="https://wa.me/573212548620?text='+
+    encodeURIComponent('Hola vamo, tuve un problema al enviar mi solicitud de crédito.')+
+    '" target="_blank" style="display:inline-block;padding:9px 16px;border-radius:9px;'+
+    'background:#25D366;color:#fff;text-decoration:none;font-weight:700;">Escribir por WhatsApp</a>';
+  box.style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function openWA(){var n=document.getElementById('nombre').value||'';var msg=encodeURIComponent('Hola vamo, acabo de enviar mi solicitud de crédito. Mi nombre es '+n+'. ¿Cuándo me dan respuesta?');window.open('https://wa.me/'+WA_NUMBER+'?text='+msg,'_blank');}
 function showLoad(m){document.getElementById('loading').classList.add('on');document.getElementById('load-msg').textContent=m;}
