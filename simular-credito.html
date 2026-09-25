@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simula tu crédito · vamo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080D14; --c1:#0D141D; --c2:#131C26; --c3:#1B2632;
+  --gold:#F26B45; --gold2:#FF8A62;
+  --gold-dim:rgba(242,107,69,.07); --gold-border:rgba(242,107,69,.28);
+  --wh:#F0F3F6; --muted:#8593A2; --muted2:#55626F;
+  --blue:#4FC3B8; --blue-dim:rgba(79,195,184,.07); --blue-border:rgba(79,195,184,.25);
+  --b1:rgba(255,255,255,.07); --b2:rgba(255,255,255,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--wh);font-family:'Roboto',sans-serif;
+  -webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top,0px);}
+.shell{max-width:640px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+.btn-inicio{position:fixed;top:14px;left:14px;z-index:150;
+  display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:20px;
+  text-decoration:none;background:rgba(13,20,29,.82);border:1px solid var(--b2);
+  color:var(--muted);font-size:11.5px;font-weight:500;backdrop-filter:blur(8px);transition:all .2s;}
+.btn-inicio:hover{color:var(--gold);border-color:var(--gold-border);}
+
+.head{text-align:center;padding:58px 24px 22px;}
+.logo{display:inline-flex;gap:2px;margin-bottom:14px;}
+.logo svg{width:46px;height:auto;}
+.brand{font-size:30px;font-weight:900;letter-spacing:-1.4px;}
+.tagline{font-family:'Roboto Mono',monospace;font-size:9.5px;letter-spacing:3px;
+  color:var(--gold);text-transform:uppercase;margin-top:5px;}
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--b2),transparent);margin:22px 24px;}
+
+.body-wrap{padding:0 22px 60px;flex:1;}
+.intro{font-size:14px;color:var(--muted);line-height:1.65;text-align:center;margin-bottom:26px;}
+
+.fi{margin-bottom:18px;}
+.fi label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:7px;}
+.fi input,.fi select{width:100%;padding:13px 15px;border-radius:11px;background:var(--c2);
+  border:1.5px solid var(--b1);color:var(--wh);font-size:15px;font-family:'Roboto',sans-serif;
+  outline:none;transition:border-color .2s;}
+.fi input:focus,.fi select:focus{border-color:var(--gold-border);}
+.hint{font-size:11.5px;color:var(--muted2);margin-top:6px;line-height:1.5;}
+
+.seg{display:flex;gap:8px;}
+.seg button{flex:1;padding:13px 10px;border-radius:11px;background:var(--c2);
+  border:1.5px solid var(--b1);color:var(--muted);font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'Roboto',sans-serif;transition:all .2s;}
+.seg button.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+
+.aviso{display:none;margin-top:10px;padding:11px 13px;border-radius:10px;
+  background:var(--gold-dim);border:1px solid var(--gold-border);
+  font-size:12.5px;line-height:1.6;}
+.aviso.on{display:block;}
+.aviso b{color:var(--gold);}
+
+/* ── Resultado ── */
+.res{display:none;margin-top:26px;}
+.res.on{display:block;}
+.hero{background:linear-gradient(135deg,var(--gold-dim),rgba(242,107,69,.02));
+  border:1px solid var(--gold-border);border-radius:16px;padding:22px;text-align:center;margin-bottom:14px;}
+.hero-lbl{font-family:'Roboto Mono',monospace;font-size:9.5px;letter-spacing:2px;
+  color:var(--gold);text-transform:uppercase;}
+.hero-val{font-size:38px;font-weight:900;letter-spacing:-1.6px;margin:7px 0 3px;}
+.hero-sub{font-size:12.5px;color:var(--muted);line-height:1.6;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px;}
+.kpi{background:var(--c1);border:1px solid var(--b1);border-radius:13px;padding:15px;}
+.kpi-lbl{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:1.4px;
+  color:var(--muted2);text-transform:uppercase;}
+.kpi-val{font-size:19px;font-weight:800;letter-spacing:-.5px;margin-top:5px;}
+.kpi-foot{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+.desglose{background:var(--c1);border:1px solid var(--b1);border-radius:13px;
+  padding:16px 17px;margin-bottom:14px;}
+.dg-tit{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:11px;}
+.dg-row{display:flex;justify-content:space-between;align-items:center;
+  font-size:13px;padding:7px 0;color:var(--muted);}
+.dg-row b{color:var(--wh);font-weight:600;font-family:'Roboto Mono',monospace;font-size:12.5px;}
+.dg-row.total{border-top:1px solid var(--b1);margin-top:7px;padding-top:11px;}
+.dg-row.total span{color:var(--wh);font-weight:600;}
+.dg-row.total b{color:var(--gold);font-size:15px;font-weight:900;}
+
+.nota{background:var(--blue-dim);border:1px solid var(--blue-border);border-radius:12px;
+  padding:13px 15px;font-size:12px;color:var(--muted);line-height:1.65;margin-bottom:16px;}
+.nota b{color:var(--blue);}
+
+.btn-cta{display:block;width:100%;padding:15px;border-radius:12px;background:var(--gold);
+  color:#000;text-decoration:none;text-align:center;font-size:15px;font-weight:900;
+  transition:all .2s;border:none;cursor:pointer;font-family:'Roboto',sans-serif;}
+.btn-cta:hover{background:var(--gold2);transform:translateY(-1px);}
+
+.tabla-tog{width:100%;margin-top:12px;padding:12px;border-radius:11px;background:var(--c2);
+  border:1px solid var(--b1);color:var(--muted);font-size:13px;font-weight:600;
+  cursor:pointer;font-family:'Roboto',sans-serif;}
+.tabla-tog:hover{border-color:var(--gold-border);color:var(--gold);}
+.tabla-wrap{display:none;margin-top:12px;overflow-x:auto;border-radius:12px;border:1px solid var(--b1);}
+.tabla-wrap.on{display:block;}
+table{width:100%;border-collapse:collapse;font-size:11.5px;font-family:'Roboto Mono',monospace;}
+th{background:var(--c2);color:var(--muted2);font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  padding:9px 8px;text-align:right;font-weight:500;white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;}
+td{padding:8px;text-align:right;border-top:1px solid var(--b1);color:var(--muted);white-space:nowrap;}
+td.cap{color:var(--wh);}
+
+.legal{text-align:center;font-size:10.5px;color:var(--muted2);padding:22px 24px 30px;line-height:1.7;}
+.legal a{color:var(--muted);}
+@media (max-width:420px){ .hero-val{font-size:32px;} .grid2{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<a class="btn-inicio" href="index.html" aria-label="Volver al inicio"><span>←</span> Inicio</a>
+
+<div class="shell">
+  <div class="head">
+    <div class="logo">
+      <svg viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6 L22 20 L4 34" stroke="#C4482A" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M26 6 L44 20 L26 34" stroke="#F26B45" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="brand">vamo</div>
+    <div class="tagline">Simula tu crédito</div>
+  </div>
+  <div class="sep"></div>
+
+  <div class="body-wrap">
+    <p class="intro">Calcula cuánto pagarías por tu vehículo eléctrico. Sin compromiso y sin dejar tus datos.</p>
+
+    <div class="fi">
+      <label>Valor del vehículo</label>
+      <input id="valor" type="number" placeholder="Ej: 4500000" min="500000" step="50000" inputmode="numeric">
+      <div class="aviso" id="aviso"></div>
+    </div>
+
+    <div class="fi">
+      <label>¿Cada cuánto quieres pagar?</label>
+      <div class="seg">
+        <button type="button" id="b-quincenal" class="on">Quincenal</button>
+        <button type="button" id="b-mensual">Mensual</button>
+      </div>
+      <div class="hint">El crédito es a 12 meses. Quincenal son 24 cuotas, mensual son 12.</div>
+    </div>
+
+    <div class="res" id="res">
+      <div class="hero">
+        <div class="hero-lbl">Tu cuota</div>
+        <div class="hero-val" id="r-cuota">$0</div>
+        <div class="hero-sub" id="r-cuota-sub"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="kpi">
+          <div class="kpi-lbl">Primera cuota</div>
+          <div class="kpi-val" id="r-primera">$0</div>
+          <div class="kpi-foot">Incluye alistamiento y estudio de crédito, por una sola vez</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Cuota inicial</div>
+          <div class="kpi-val" id="r-inicial">$0</div>
+          <div class="kpi-foot" id="r-inicial-foot">No necesitas cuota inicial</div>
+        </div>
+      </div>
+
+      <div class="desglose">
+        <div class="dg-tit">Qué incluye cada cuota</div>
+        <div class="dg-row"><span>Capital e intereses</span><b id="d-ci">$0</b></div>
+        <div class="dg-row"><span>Monitoreo GPS</span><b id="d-gps">$0</b></div>
+        <div class="dg-row"><span>Protección del vehículo</span><b id="d-seg">$0</b></div>
+        <div class="dg-row"><span>Costo de transacción</span><b id="d-com">$0</b></div>
+        <div class="dg-row total"><span>Total por cuota</span><b id="d-total">$0</b></div>
+      </div>
+
+      <div class="nota">
+        El <b>GPS va incluido</b> en tu cuota: nosotros lo instalamos y respalda el crédito.
+        La <b>protección</b> cubre imprevistos con tu vehículo durante los 12 meses.
+      </div>
+
+      <a class="btn-cta" href="solicitar-credito.html">Solicitar este crédito</a>
+      <button class="tabla-tog" id="tog">Ver el plan de pagos completo</button>
+      <div class="tabla-wrap" id="tabla-wrap"></div>
+    </div>
+
+    <div class="legal">
+      Esta simulación es informativa y no constituye una oferta de crédito.
+      Los valores definitivos se confirman tras el estudio de tu solicitud.
+      <p style="margin-top:14px">vamo es una marca operada por Tribu GPS SAS · NIT 901.356.553-8<br>
+      ¿Dudas? Escríbenos por <a href="https://wa.me/573212548620">WhatsApp</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// La formula es LA MISMA del nodo 6e del formulario y del nodo RM4 del
+// recalculo. Si alla cambia, aqui tambien tiene que cambiar: una
+// simulacion que no coincida con la cuota real destruye la confianza
+// del cliente justo cuando firma.
+//
+// La tasa y el tope se dejan como constantes visibles para que sean
+// faciles de actualizar cuando cambie la usura certificada.
+// ═══════════════════════════════════════════════════════════
+var TASA_EA = 66.87;            // efectivo anual (usura de bajo monto)
+var TOPE_FINANCIABLE = 5500000; // por encima, el cliente pone la diferencia
+var GPS_ANUAL = 660000;
+var COSTO_APROBACION = 150000;
+var SEGURO_PCT = 0.05;
+
+function fmt(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
+function comision(m){ return Math.round(m * 0.0268 + 900); }
+
+function simular(valorVehiculo, esQuincenal){
+  var inicial   = Math.max(0, valorVehiculo - TOPE_FINANCIABLE);
+  var monto     = Math.min(valorVehiculo, TOPE_FINANCIABLE);
+  var numCuotas = esQuincenal ? 24 : 12;
+  var periodos  = esQuincenal ? 26 : 12;
+
+  var tp = Math.pow(1 + TASA_EA / 100, 1 / periodos) - 1;
+  var ci = monto * (tp * Math.pow(1 + tp, numCuotas)) / (Math.pow(1 + tp, numCuotas) - 1);
+
+  var gps = Math.round(GPS_ANUAL / numCuotas);
+  var seg = Math.round(monto * SEGURO_PCT / numCuotas);
+
+  var base      = ci + gps + seg;
+  var comRegular = comision(base);
+  var regular   = Math.round(base + comRegular);
+
+  var basePrimera = base + COSTO_APROBACION;
+  var primera     = Math.round(basePrimera + comision(basePrimera));
+
+  // Tabla de amortizacion, para quien quiera ver el detalle
+  var filas = [], saldo = monto;
+  for (var i = 1; i <= numCuotas; i++){
+    var interes = saldo * tp;
+    var capital = ci - interes;
+    var extras  = gps + seg + (i === 1 ? COSTO_APROBACION : 0);
+    var antes   = ci + extras;
+    saldo = Math.max(0, saldo - capital);
+    filas.push({
+      n: i,
+      capital: Math.round(capital),
+      interes: Math.round(interes),
+      otros: Math.round(extras + comision(antes)),
+      total: Math.round(antes + comision(antes)),
+      saldo: Math.round(saldo)
+    });
+  }
+
+  return {
+    valorVehiculo: valorVehiculo, inicial: inicial, monto: monto,
+    numCuotas: numCuotas, esQuincenal: esQuincenal,
+    ci: Math.round(ci), gps: gps, seg: seg, com: comRegular,
+    regular: regular, primera: primera,
+    totalPagar: Math.round(regular * (numCuotas - 1) + primera),
+    filas: filas
+  };
+}
+
+var esQuincenal = true;
+
+function render(){
+  var valor = parseInt(document.getElementById('valor').value) || 0;
+  var res   = document.getElementById('res');
+  var aviso = document.getElementById('aviso');
+
+  if (valor < 500000){
+    res.classList.remove('on');
+    aviso.classList.remove('on');
+    return;
+  }
+
+  var s = simular(valor, esQuincenal);
+
+  if (s.inicial > 0){
+    aviso.innerHTML = 'Financiamos hasta <b>' + fmt(TOPE_FINANCIABLE) +
+      '</b> por vehículo. Para este necesitas una cuota inicial de <b>' + fmt(s.inicial) + '</b>.';
+    aviso.classList.add('on');
+  } else {
+    aviso.classList.remove('on');
+  }
+
+  document.getElementById('r-cuota').textContent = fmt(s.regular);
+  document.getElementById('r-cuota-sub').textContent =
+    (s.esQuincenal ? 'cada quincena · 24 cuotas' : 'cada mes · 12 cuotas') +
+    ' · financias ' + fmt(s.monto);
+
+  document.getElementById('r-primera').textContent = fmt(s.primera);
+  document.getElementById('r-inicial').textContent = s.inicial > 0 ? fmt(s.inicial) : '$0';
+  document.getElementById('r-inicial-foot').textContent = s.inicial > 0
+    ? 'La diferencia entre el valor del vehículo y el máximo que financiamos'
+    : 'No necesitas cuota inicial';
+
+  document.getElementById('d-ci').textContent    = fmt(s.ci);
+  document.getElementById('d-gps').textContent   = fmt(s.gps);
+  document.getElementById('d-seg').textContent   = fmt(s.seg);
+  document.getElementById('d-com').textContent   = fmt(s.com);
+  document.getElementById('d-total').textContent = fmt(s.regular);
+
+  var html = '<table><thead><tr><th>Cuota</th><th>Capital</th><th>Interés</th>' +
+             '<th>Otros</th><th>Total</th><th>Saldo</th></tr></thead><tbody>';
+  for (var i = 0; i < s.filas.length; i++){
+    var f = s.filas[i];
+    html += '<tr><td>' + f.n + '</td><td class="cap">' + fmt(f.capital) + '</td><td>' +
+            fmt(f.interes) + '</td><td>' + fmt(f.otros) + '</td><td class="cap">' +
+            fmt(f.total) + '</td><td>' + fmt(f.saldo) + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('tabla-wrap').innerHTML = html;
+
+  res.classList.add('on');
+}
+
+document.getElementById('valor').addEventListener('input', render);
+document.getElementById('b-quincenal').addEventListener('click', function(){
+  esQuincenal = true;
+  this.classList.add('on');
+  document.getElementById('b-mensual').classList.remove('on');
+  render();
+});
+document.getElementById('b-mensual').addEventListener('click', function(){
+  esQuincenal = false;
+  this.classList.add('on');
+  document.getElementById('b-quincenal').classList.remove('on');
+  render();
+});
+document.getElementById('tog').addEventListener('click', function(){
+  var w = document.getElementById('tabla-wrap');
+  w.classList.toggle('on');
+  this.textContent = w.classList.contains('on')
+    ? 'Ocultar el plan de pagos'
+    : 'Ver el plan de pagos completo';
+});
+</script>
+</body>
+</html>
