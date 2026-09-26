@@ -270,6 +270,11 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
     <div class="err" id="err-concesionario">Indícanos dónde lo compras.</div>
   </div>
   <div class="fi">
+    <label>¿Quién te atendió?</label>
+    <input id="vendedor" placeholder="Nombre de quien te atendió">
+    <div class="err" id="err-vendedor">Cuéntanos quién te atendió.</div>
+  </div>
+  <div class="fi">
     <label>¿Para qué lo usarás?</label>
     <select id="uso">
       <option value="trabajo">Trabajo — domicilios, mensajería, plataformas</option>
@@ -456,6 +461,32 @@ function updateUI(){var labels=['','DATOS PERSONALES','EVALUACIÓN','DOCUMENTACI
 // inicial por la diferencia.
 var TOPE_FINANCIABLE = 5500000;
 
+// ═══ VENDEDOR ═══
+// Texto libre, porque los vendedores son muchos y cambian. Pero se
+// normaliza antes de guardar: sin esto, "juan perez", "JUAN PEREZ" y
+// "Juan  Perez" quedan como tres vendedores distintos y el reporte de
+// atribucion pierde sentido.
+//
+// Se respetan las particulas en minuscula (de, del, la, los) para que
+// "maria de los angeles" no quede como "Maria De Los Angeles".
+function normalizarNombre(txt){
+  var particulas = ['de','del','la','las','los','y','da','di'];
+  return (txt || '')
+    .trim()
+    .replace(/\s+/g, ' ')                 // varios espacios -> uno
+    .toLowerCase()
+    .split(' ')
+    .map(function(p, i){
+      if (i > 0 && particulas.indexOf(p) !== -1) return p;
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    })
+    .join(' ');
+}
+
+function vendedorElegido(){
+  return normalizarNombre(document.getElementById('vendedor').value);
+}
+
 function fmtCOP(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
 
 // Devuelve el desglose de la financiacion para un valor de vehiculo.
@@ -510,6 +541,9 @@ if(!mod){em.classList.add('on');ok=false;}else{em.classList.remove('on');}
 var con=document.getElementById('concesionario').value.trim();
 var ec=document.getElementById('err-concesionario');
 if(!con){ec.classList.add('on');ok=false;}else{ec.classList.remove('on');}
+var ven=vendedorElegido();
+var ev=document.getElementById('err-vendedor');
+if(!ven){ev.classList.add('on');ok=false;}else{ev.classList.remove('on');}
 revisarMonto();
 return ok;}
 function setQ(key,val,pts,el,di){el.closest('.q-block').querySelectorAll('.opt').forEach(function(o){o.classList.remove('sel');});el.classList.add('sel');el.closest('.q-block').classList.add('answered');var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};if(isNew)answeredCount++;updateDots();}
@@ -526,6 +560,7 @@ fd.append('vehiculo_valor_comercial',_d.valor);
 fd.append('cuota_inicial',_d.inicial);
 fd.append('vehiculo_modelo',document.getElementById('modelo').value.trim());
 fd.append('concesionario',document.getElementById('concesionario').value.trim());
+fd.append('vendedor',vendedorElegido());
 fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{
 setLoadMsg('ENVIANDO TU SOLICITUD...');
 // Tiempo maximo de espera. Si el servidor no responde, se avisa en vez
