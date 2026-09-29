@@ -693,8 +693,15 @@ showError(err&&err.name==='AbortError',null,_det);
 var ETIQUETA_DOC={cedula_frente:'Cédula (frente)',cedula_reverso:'Cédula (reverso)',
   ingresos_file:'Comprobante de ingresos',domicilio_file:'Comprobante de domicilio'};
 var docsPendientes=[];
-var MAX_INTENTOS_DOC=5;
-var ESPERA_DOC_MS=4000;
+// La ventana de espera tiene que cubrir lo que tarda el workflow en crear
+// la carpeta de Drive. Con 5 intentos cada 4s (20 segundos) se agotaba antes
+// y la carpeta quedaba vacia. Ahora son 12 x 5s = 60 segundos de margen.
+var MAX_INTENTOS_DOC=12;
+var ESPERA_DOC_MS=5000;
+// El primer intento no tiene sentido lanzarlo de inmediato: el formulario
+// acaba de responder y la carpeta todavia no existe. Se espera un momento
+// para no gastar un intento en un fallo seguro.
+var ESPERA_INICIAL_MS=3500;
 
 function dormir(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
@@ -704,7 +711,8 @@ function pintarDocs(estados){
   for(var i=0;i<estados.length;i++){
     var e=estados[i];
     var cls=e.estado==='ok'?'ok':(e.estado==='err'?'err':'');
-    var txt=e.estado==='ok'?'✓ recibido':(e.estado==='err'?'no se pudo':'subiendo...');
+    var txt=e.estado==='ok'?'✓ recibido':(e.estado==='err'?'no se pudo':
+      (e.estado==='espera'?'en espera...':'subiendo...'));
     html+='<div class="doc-line"><span>'+e.etiqueta+'</span><span class="dl-st '+cls+'">'+txt+'</span></div>';
   }
   cont.innerHTML=html;
@@ -734,7 +742,13 @@ async function subirUno(creditId,doc){
         await dormir(ESPERA_DOC_MS); continue;
       }
       var j=await res.json().catch(function(){return{};});
-      if(j.ok) return true;
+      if(j.ok){
+        var _n=document.getElementById('doc-prog-nota');
+        if(_n&&_n.textContent.indexOf('Preparando')===0)
+          _n.textContent='No cierres esta pantalla mientras terminan de subir. '+
+            'Tu solicitud ya quedó registrada.';
+        return true;
+      }
       console.warn('[vamo] doc '+doc.campo+' no listo:',j.motivo);
       if(!j.reintentar) return false;
       await dormir(ESPERA_DOC_MS);
@@ -753,9 +767,14 @@ async function subirDocumentos(creditId){
   var estados=docsPendientes.map(function(d){return {etiqueta:d.etiqueta,estado:'pend'};});
   pintarDocs(estados);
   document.getElementById('doc-prog-nota').textContent=
-    'No cierres esta pantalla mientras terminan de subir. Tu solicitud ya quedó registrada.';
+    'Preparando tu carpeta segura. No cierres esta pantalla mientras terminan de subir; '+
+    'tu solicitud ya quedó registrada.';
+  await dormir(ESPERA_INICIAL_MS);
   var fallidos=[];
   for(var i=0;i<docsPendientes.length;i++){
+    for(var j=i+1;j<estados.length;j++) estados[j].estado='espera';
+    estados[i].estado='pend';
+    pintarDocs(estados);
     var ok=await subirUno(creditId,docsPendientes[i]);
     estados[i].estado=ok?'ok':'err';
     if(!ok) fallidos.push(docsPendientes[i].etiqueta);
