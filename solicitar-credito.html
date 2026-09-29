@@ -187,6 +187,13 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
 .cc-val.gold{color:var(--gold);}
 .next-block{background:var(--c1);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:16px 16px 16px 18px;margin-bottom:16px;text-align:left;}
 .nb-tag{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;}
+.doc-prog{margin:16px 0;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);}
+.doc-prog-tag{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
+.doc-line{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);padding:3px 0;line-height:1.6;}
+.doc-line .dl-st{white-space:nowrap;font-weight:700;}
+.doc-line .dl-st.ok{color:#5FBF7F;}
+.doc-line .dl-st.err{color:#E05C5C;}
+.doc-prog-nota{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;}
 .nb-item{display:flex;gap:9px;font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.6;align-items:flex-start;}
 .nb-num{color:var(--gold);font-weight:700;flex-shrink:0;font-family:'Roboto Mono',monospace;}
 .wa-btn{width:100%;padding:14px;background:#25D366;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
@@ -426,6 +433,11 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
     <div class="conf-card" style="border-color:rgba(242,107,69,.3);background:rgba(242,107,69,.06)"><span class="cc-lbl">Estado de tu solicitud</span><span class="cc-val gold">En evaluación</span></div>
     <div class="conf-card"><span class="cc-lbl">Tiempo de respuesta</span><span class="cc-val">24–48 horas hábiles</span></div>
   </div>
+  <div class="doc-prog" id="doc-prog" style="display:none">
+    <div class="doc-prog-tag" id="doc-prog-tag">Subiendo tus documentos</div>
+    <div id="doc-prog-list"></div>
+    <div class="doc-prog-nota" id="doc-prog-nota"></div>
+  </div>
   <div class="next-block">
     <div class="nb-tag">Próximos pasos</div>
     <div class="nb-item"><span class="nb-num">01.</span><span>El equipo revisa tus documentos en 24–48 horas.</span></div>
@@ -451,6 +463,12 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
 
 <script>
 var N8N_WEBHOOK='https://tribugps.pikapod.net/webhook/credit-form';
+// Los documentos suben por su propio webhook, DESPUES de que el lead ya
+// quedo registrado. Antes viajaban dentro del mismo POST del formulario:
+// si los archivos eran grandes o la conexion del cliente flaqueaba, el
+// envio entero fallaba y el lead se perdia aunque los datos estuvieran
+// perfectos. Ahora un documento que falla no cuesta la solicitud.
+var N8N_WEBHOOK_DOCS='https://tribugps.pikapod.net/webhook/subir-documento';
 var WA_NUMBER='573212548620';
 var curStep=1,scoreData={},answeredCount=0;
 function goNext(){if(curStep===1){if(!val1())return;goTo(2);}else if(curStep===2){if(answeredCount<7){alert('Por favor responde todas las preguntas antes de continuar.');return;}goTo(3);}else if(curStep===3){doSubmit();}}
@@ -550,7 +568,59 @@ function setQ(key,val,pts,el,di){el.closest('.q-block').querySelectorAll('.opt')
 function setYN(key,val,pts){var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};document.getElementById('yn3-si').className='yn-opt'+(val==='si'?' sel-yes':'');document.getElementById('yn3-no').className='yn-opt'+(val==='no'?' sel-no':'');document.getElementById('qb3').classList.add('answered');if(!scoreData._yn3){scoreData._yn3=true;answeredCount++;}updateDots();}
 function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var d=document.getElementById('qd'+i);if(d)d.classList.toggle('filled',i<=t);}document.getElementById('qp-lbl').textContent=t+' DE 7 PREGUNTAS';}
 function getTotal(){return['income_gross','income_net','quincenal','employment','debts','residence','references'].reduce(function(s,k){return s+(scoreData[k]?scoreData[k].pts:0);},0);}
-function fileSelected(wId,iId,nId){var f=document.getElementById(iId).files[0];if(f){document.getElementById(wId).classList.add('has-file');document.getElementById(nId).textContent='✓ '+f.name;}}
+function fileSelected(wId,iId,nId){var f=document.getElementById(iId).files[0];if(f){document.getElementById(wId).classList.add('has-file');document.getElementById(nId).textContent='✓ '+f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';}}
+
+// ══════════════════════════════════════════════════════════════════
+// COMPRESION DE IMAGENES ANTES DE ENVIAR
+// ──────────────────────────────────────────────────────────────────
+// Una foto de celular pesa entre 3 y 8 MB. Cuatro documentos pueden
+// sumar 30 MB y el servidor rechaza el envio antes de que el workflow
+// siquiera arranque (413 Payload Too Large): el cliente veia
+// "No pudimos registrar tu solicitud" y el lead se perdia.
+//
+// Una cedula se lee perfecto a 1600px. Esto la baja a ~250 KB.
+// Los PDF pasan intactos (no se pueden redibujar en canvas).
+// Si algo falla al comprimir, se envia el archivo ORIGINAL: la
+// compresion nunca debe ser la razon de que se pierda una solicitud.
+// ══════════════════════════════════════════════════════════════════
+var MAX_LADO = 1600;          // px del lado mas largo
+var CALIDAD  = 0.78;          // JPEG
+var MAX_DOC_MB = 8;           // tope por archivo: ahora cada uno viaja solo
+
+function comprimirImagen(file){
+  return new Promise(function(resolve){
+    if(!file || !file.type || file.type.indexOf('image/') !== 0) return resolve(file);
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    var listo = false;
+    // Si el navegador no puede decodificar el formato (HEIC viejo, por
+    // ejemplo) no nos quedamos colgados: a los 12s seguimos con el original.
+    var guarda = setTimeout(function(){ if(!listo){ listo=true; URL.revokeObjectURL(url); resolve(file); } }, 12000);
+    img.onload = function(){
+      if(listo) return; listo = true; clearTimeout(guarda);
+      try{
+        var w = img.naturalWidth, hh = img.naturalHeight;
+        if(!w || !hh){ URL.revokeObjectURL(url); return resolve(file); }
+        var esc = Math.min(1, MAX_LADO / Math.max(w, hh));
+        var cv = document.createElement('canvas');
+        cv.width = Math.round(w * esc); cv.height = Math.round(hh * esc);
+        var cx = cv.getContext('2d');
+        cx.fillStyle = '#FFFFFF'; cx.fillRect(0, 0, cv.width, cv.height);  // PNG con transparencia -> fondo blanco
+        cx.drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(function(blob){
+          URL.revokeObjectURL(url);
+          // Solo sirve si de verdad quedo mas liviano
+          if(!blob || blob.size >= file.size) return resolve(file);
+          var nombre = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+          try{ resolve(new File([blob], nombre, {type:'image/jpeg'})); }
+          catch(e){ blob.name = nombre; resolve(blob); }
+        }, 'image/jpeg', CALIDAD);
+      }catch(e){ URL.revokeObjectURL(url); resolve(file); }
+    };
+    img.onerror = function(){ if(listo) return; listo=true; clearTimeout(guarda); URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
 async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});var _d=desglose(parseInt(document.getElementById('vehiculo').value)||0);
 // vehiculo_monto = lo que FINANCIAMOS (topado). El valor comercial y la
 // cuota inicial viajan aparte para que queden registrados y salgan en la
@@ -561,7 +631,23 @@ fd.append('cuota_inicial',_d.inicial);
 fd.append('vehiculo_modelo',document.getElementById('modelo').value.trim());
 fd.append('concesionario',document.getElementById('concesionario').value.trim());
 fd.append('vendedor',vendedorElegido());
-fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']].forEach(function(p){var inp=document.getElementById(p[0]);if(inp&&inp.files[0])fd.append(p[1],inp.files[0]);});try{
+fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});// Los documentos se optimizan antes de adjuntarlos
+var _docs=[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']];
+var _pendientes=_docs.filter(function(p){var i=document.getElementById(p[0]);return i&&i.files[0];});
+// Los archivos se comprimen ahora pero NO se adjuntan a este POST: se
+// guardan aparte y suben despues, de a uno, cuando el lead ya esta a salvo.
+docsPendientes=[];
+if(_pendientes.length){
+  setLoadMsg('OPTIMIZANDO TUS DOCUMENTOS...');
+  for(var _i=0;_i<_pendientes.length;_i++){
+    var _p=_pendientes[_i];
+    var _orig=document.getElementById(_p[0]).files[0];
+    var _fin=await comprimirImagen(_orig);
+    console.log('[vamo] '+_p[1]+': '+(_orig.size/1048576).toFixed(2)+' MB -> '+(_fin.size/1048576).toFixed(2)+' MB');
+    docsPendientes.push({campo:_p[1],etiqueta:ETIQUETA_DOC[_p[1]]||_p[1],archivo:_fin,nombre:_fin.name||_orig.name});
+  }
+}
+try{
 setLoadMsg('ENVIANDO TU SOLICITUD...');
 // Tiempo maximo de espera. Si el servidor no responde, se avisa en vez
 // de dejar al cliente mirando la pantalla de carga indefinidamente.
@@ -569,17 +655,126 @@ var ctrl=new AbortController();
 var tmo=setTimeout(function(){ctrl.abort();},90000);
 var res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd,signal:ctrl.signal});
 clearTimeout(tmo);
-if(!res.ok)throw new Error('HTTP '+res.status);
+if(!res.ok){
+  // El codigo importa para el diagnostico: 413 = archivos muy grandes,
+  // 500 = fallo dentro del workflow, 404 = webhook apagado.
+  var _cuerpo='';
+  try{ _cuerpo=(await res.text()).slice(0,300); }catch(e){}
+  console.error('[vamo] respuesta del servidor', res.status, _cuerpo);
+  var _e=new Error('HTTP '+res.status); _e.httpStatus=res.status; throw _e;
+}
 var result=await res.json().catch(function(){return{};});
 // Solo es exito si el servidor devuelve un ID real.
 if(!result||!result.creditId)throw new Error('Respuesta sin ID de credito');
 hideLoad();
 showConf(result);
+// El lead ya esta registrado. A partir de aqui nada puede perderlo.
+subirDocumentos(result.creditId);
 }catch(err){
 hideLoad();
 console.error(err);
-showError(err&&err.name==='AbortError');
+var _det='';
+if(err&&err.httpStatus===413) _det='Tus documentos son demasiado grandes para el servidor. Intenta con fotos más livianas.';
+else if(err&&err.httpStatus) _det='Código de error: '+err.httpStatus+'. Menciónalo si nos escribes por WhatsApp.';
+showError(err&&err.name==='AbortError',null,_det);
 }}
+// ══════════════════════════════════════════════════════════════════
+// SUBIDA DE DOCUMENTOS (fase 2)
+// ──────────────────────────────────────────────────────────────────
+// Corre DESPUES de que el cliente ya vio su ID de solicitud. Sube un
+// archivo por request. Si uno falla, se le dice cual y se le ofrece
+// WhatsApp -- la solicitud sigue registrada.
+//
+// El reintento existe por una carrera real: el formulario le responde
+// al cliente antes de terminar de crear las carpetas de Drive. Si el
+// primer archivo llega antes que la carpeta, el servidor contesta
+// {ok:false, reintentar:true} y aqui se espera y se vuelve a intentar.
+// ══════════════════════════════════════════════════════════════════
+var ETIQUETA_DOC={cedula_frente:'Cédula (frente)',cedula_reverso:'Cédula (reverso)',
+  ingresos_file:'Comprobante de ingresos',domicilio_file:'Comprobante de domicilio'};
+var docsPendientes=[];
+var MAX_INTENTOS_DOC=5;
+var ESPERA_DOC_MS=4000;
+
+function dormir(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+function pintarDocs(estados){
+  var cont=document.getElementById('doc-prog-list');
+  var html='';
+  for(var i=0;i<estados.length;i++){
+    var e=estados[i];
+    var cls=e.estado==='ok'?'ok':(e.estado==='err'?'err':'');
+    var txt=e.estado==='ok'?'✓ recibido':(e.estado==='err'?'no se pudo':'subiendo...');
+    html+='<div class="doc-line"><span>'+e.etiqueta+'</span><span class="dl-st '+cls+'">'+txt+'</span></div>';
+  }
+  cont.innerHTML=html;
+}
+
+async function subirUno(creditId,doc){
+  // Un archivo mas grande que esto no lo va a aceptar el servidor por mas
+  // que se reintente: se falla rapido y se le pide por WhatsApp.
+  if(doc.archivo && doc.archivo.size > MAX_DOC_MB*1048576){
+    console.error('[vamo] '+doc.campo+' pesa '+(doc.archivo.size/1048576).toFixed(1)+' MB, tope '+MAX_DOC_MB+' MB');
+    return false;
+  }
+  for(var intento=1;intento<=MAX_INTENTOS_DOC;intento++){
+    try{
+      var fd=new FormData();
+      fd.append('creditId',creditId);
+      fd.append('tipo',doc.campo);
+      fd.append('archivo',doc.archivo,doc.nombre);
+      var ctrl=new AbortController();
+      var tmo=setTimeout(function(){ctrl.abort();},60000);
+      var res=await fetch(N8N_WEBHOOK_DOCS,{method:'POST',body:fd,signal:ctrl.signal});
+      clearTimeout(tmo);
+      if(!res.ok){
+        console.error('[vamo] doc '+doc.campo+' HTTP '+res.status);
+        // 413/500 no se arreglan reintentando el mismo archivo
+        if(res.status===413) return false;
+        await dormir(ESPERA_DOC_MS); continue;
+      }
+      var j=await res.json().catch(function(){return{};});
+      if(j.ok) return true;
+      console.warn('[vamo] doc '+doc.campo+' no listo:',j.motivo);
+      if(!j.reintentar) return false;
+      await dormir(ESPERA_DOC_MS);
+    }catch(e){
+      console.error('[vamo] doc '+doc.campo,e);
+      await dormir(ESPERA_DOC_MS);
+    }
+  }
+  return false;
+}
+
+async function subirDocumentos(creditId){
+  if(!creditId||!docsPendientes.length) return;
+  var caja=document.getElementById('doc-prog');
+  caja.style.display='block';
+  var estados=docsPendientes.map(function(d){return {etiqueta:d.etiqueta,estado:'pend'};});
+  pintarDocs(estados);
+  document.getElementById('doc-prog-nota').textContent=
+    'No cierres esta pantalla mientras terminan de subir. Tu solicitud ya quedó registrada.';
+  var fallidos=[];
+  for(var i=0;i<docsPendientes.length;i++){
+    var ok=await subirUno(creditId,docsPendientes[i]);
+    estados[i].estado=ok?'ok':'err';
+    if(!ok) fallidos.push(docsPendientes[i].etiqueta);
+    pintarDocs(estados);
+  }
+  var tag=document.getElementById('doc-prog-tag');
+  var nota=document.getElementById('doc-prog-nota');
+  if(!fallidos.length){
+    tag.textContent='Documentos recibidos';
+    nota.textContent='Ya tenemos todo. El equipo los revisa en 24–48 horas.';
+  }else{
+    tag.textContent='Faltan algunos documentos';
+    nota.innerHTML='No pudimos recibir: <strong>'+fallidos.join(', ')+'</strong>. '+
+      'Tu solicitud <strong>ya está registrada</strong>, así que no la vuelvas a enviar: '+
+      'mándanos esos archivos por WhatsApp y los adjuntamos a tu carpeta.';
+  }
+  docsPendientes=[];
+}
+
 function showConf(result){
   // Solo se muestra un ID que el servidor haya confirmado. Antes, si el
   // envio fallaba, se INVENTABA uno aleatorio (TG-2026-100 a 999) y se
@@ -593,10 +788,10 @@ function showConf(result){
   document.getElementById('conf-id').textContent=creditId;
   window.scrollTo(0,0);
 }
-function showError(fueTimeout){
-  var msg = fueTimeout
+function showError(fueTimeout,msgPropio,detalle){
+  var msg = msgPropio ? msgPropio : (fueTimeout
     ? 'Tu solicitud está tardando más de lo normal y no pudimos confirmarla.'
-    : 'No pudimos registrar tu solicitud.';
+    : 'No pudimos registrar tu solicitud.');
   var box=document.getElementById('err-envio');
   if(!box){
     box=document.createElement('div');
@@ -613,6 +808,7 @@ function showError(fueTimeout){
   box.innerHTML='<b style="color:#E05C5C">'+msg+'</b><br>'+
     'Tus datos siguen en el formulario. Intenta enviarlo de nuevo en unos minutos. '+
     'Si el problema continúa, escríbenos por WhatsApp y te ayudamos a completarla.'+
+    (detalle?'<div style="margin-top:8px;font-size:12px;color:rgba(240,243,246,.6)">'+detalle+'</div>':'')+
     '<br><br><a href="https://wa.me/573212548620?text='+
     encodeURIComponent('Hola vamo, tuve un problema al enviar mi solicitud de crédito.')+
     '" target="_blank" style="display:inline-block;padding:9px 16px;border-radius:9px;'+
