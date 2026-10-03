@@ -3,10 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>vamo — crédito para tu vehículo eléctrico</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Solicita tu crédito — vamo</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#080D14">
 <style>
+/* Resumen de financiacion, desglosado en vivo. */
+.resumen-fin{display:none;margin:-4px 0 18px;padding:13px 15px;border-radius:11px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);}
+.resumen-fin.on{display:block;}
+.rf-row{display:flex;justify-content:space-between;align-items:center;
+  font-size:12.5px;color:#8593A2;padding:5px 0;}
+.rf-row b{color:#F0F3F6;font-weight:600;}
+.rf-row.rf-total{border-top:1px solid rgba(255,255,255,.09);margin-top:5px;padding-top:9px;}
+.rf-row.rf-total span{color:#F0F3F6;font-weight:500;}
+.rf-row.rf-total b{color:#F26B45;font-size:15px;font-weight:900;}
+
+/* Aviso de cuota inicial: el credito financia hasta un tope, asi que si
+   el vehiculo vale mas, el cliente debe cubrir la diferencia. Se muestra
+   en vivo mientras escribe, no al enviar -- asi no llena todo el
+   formulario para enterarse al final. */
+.aviso-inicial{display:none;margin-top:9px;padding:11px 13px;border-radius:9px;
+  background:rgba(242,107,69,.09);border:1px solid rgba(242,107,69,.3);
+  font-size:12.5px;line-height:1.6;color:#F0F3F6;}
+.aviso-inicial.on{display:block;}
+.aviso-inicial b{color:#F26B45;}
+
 /* ===== VAMO · BRAND CONFIG =========================================
    Toda la identidad vive en estas variables. Para publicar la misma
    plataforma con la marca de un comercializador, se cambian SOLO
@@ -15,113 +36,976 @@
    --blue* = color secundario / estados informativos
    =================================================================== */
 :root{
-  --bg:#080D14; --c1:#0D141D; --c2:#131C26; --c3:#1B2632;
-  --gold:#F26B45; --gold2:#FF8A62; --gold3:#C4482A;
-  --gold-dim:rgba(242,107,69,.07); --gold-dim2:rgba(242,107,69,.13);
+  --bg:#080D14;
+  --c1:#0D141D;
+  --c2:#131C26;
+  --c3:#1B2632;
+  --gold:#F26B45;
+  --gold2:#FF8A62;
+  --gold3:#C4482A;
+  --gold-dim:rgba(242,107,69,.07);
+  --gold-dim2:rgba(242,107,69,.13);
   --gold-border:rgba(242,107,69,.28);
-  --wh:#F0F3F6; --muted:#8593A2; --muted2:#55626F;
-  --blue:#4FC3B8; --blue-dim:rgba(79,195,184,.07); --blue-border:rgba(79,195,184,.25);
-  --b1:rgba(255,255,255,.07); --b2:rgba(255,255,255,.12);
+  --gold-glow:rgba(242,107,69,.15);
+  --wh:#F0F3F6;
+  --muted:#8593A2;
+  --muted2:#55626F;
+  --red:#E05C5C;
+  --b1:rgba(255,255,255,.07);
+  --b2:rgba(255,255,255,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html{background:#080D14;}
 body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-height:100vh;
-  background-image:radial-gradient(ellipse 80% 40% at 50% -5%,rgba(242,107,69,.06) 0%,transparent 55%);}
+  background:#080D14;}
 .shell{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
 
-.hero{padding:48px 22px 28px;text-align:center;position:relative;}
-.logo-hero{width:120px;height:120px;object-fit:contain;margin:0 auto 14px;display:block;}
-.hero-brand{font-size:30px;font-weight:900;letter-spacing:-1.4px;text-transform:lowercase;}
-.hero-sub{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-top:4px;}
+/* ── HERO HEADER ── */
+.hero{padding:32px 22px 24px;text-align:center;position:relative;}
+.hero::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:1px;background:linear-gradient(to right,transparent,var(--gold-border),transparent);}
+.logo-hero{width:110px;height:110px;object-fit:contain;margin:0 auto 14px;display:block;filter:none;}
+.hero-brand{font-size:26px;font-weight:900;letter-spacing:-1.2px;color:var(--wh);text-transform:lowercase;margin-bottom:2px;}
+.hero-sub{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
 
-.body-wrap{padding:8px 22px 40px;flex:1;display:flex;flex-direction:column;}
-.intro-text{text-align:center;font-size:14px;color:var(--muted);line-height:1.7;margin-bottom:32px;padding:0 6px;}
+/* ── PROGRESS ── */
+.prog-wrap{padding:16px 22px 0;}
+.prog-bars{display:flex;gap:5px;margin-bottom:7px;}
+.pb{height:2px;flex:1;border-radius:1px;background:rgba(255,255,255,.08);transition:background .35s;}
+.pb.done{background:var(--gold);}
+.pb.active{background:rgba(242,107,69,.5);}
+.prog-lbl{font-size:10px;color:var(--muted2);display:flex;justify-content:space-between;font-family:'Roboto Mono',monospace;letter-spacing:.5px;}
 
-.option-card{display:block;text-decoration:none;border-radius:18px;padding:24px 22px;margin-bottom:16px;cursor:pointer;transition:all .2s;border:1.5px solid var(--b1);position:relative;overflow:hidden;}
-.option-card:hover{transform:translateY(-2px);}
+/* ── STEPS ── */
+.step-wrap{padding:0 22px;flex:1;}
+.step{display:none;padding-top:22px;}
+.step.active{display:block;}
+.eyebrow{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase;margin-bottom:7px;}
+.step-title{font-size:22px;font-weight:900;letter-spacing:-.5px;margin-bottom:5px;}
+.step-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
 
-.opt-gold{background:linear-gradient(135deg,rgba(242,107,69,.1),rgba(242,107,69,.03));border-color:var(--gold-border);}
-.opt-gold:hover{border-color:var(--gold);box-shadow:0 8px 28px rgba(242,107,69,.18);}
+/* ── INTRO PILL ── */
+.intro-pill{display:flex;gap:11px;align-items:flex-start;padding:13px 14px;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:10px;margin-bottom:20px;}
+.ip-text{font-size:12px;color:var(--muted);line-height:1.6;}
+.ip-text strong{color:var(--wh);}
 
-.opt-blue{background:linear-gradient(135deg,rgba(79,195,184,.08),rgba(79,195,184,.02));border-color:var(--blue-border);}
-.opt-blue:hover{border-color:var(--blue);box-shadow:0 8px 28px rgba(79,195,184,.15);}
+/* ── FIELDS ── */
+.fi{margin-bottom:14px;}
+.fi label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;font-family:'Roboto Mono',monospace;}
+.fi input,.fi select{width:100%;background:var(--c1);border:1px solid var(--b1);border-radius:9px;color:var(--wh);font-family:'Roboto',sans-serif;font-size:15px;padding:12px 14px;outline:none;transition:border-color .2s,background .2s,box-shadow .2s;-webkit-appearance:none;appearance:none;}
+.fi input:focus,.fi select:focus{border-color:var(--gold-border);background:var(--gold-dim);box-shadow:0 0 0 3px var(--gold-glow);}
+.fi input::placeholder{color:var(--muted2);}
+.fi select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;background-color:var(--c1);padding-right:36px;}
+.fi select option{background:var(--c2);color:var(--wh);}
+.fi-row{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.err{color:var(--red);font-size:11px;margin-top:4px;display:none;font-family:'Roboto Mono',monospace;}
+.err.on{display:block;}
+.divider{height:1px;background:linear-gradient(to right,transparent,rgba(242,107,69,.2),transparent);margin:18px 0;}
 
-.opt-icon{font-size:30px;margin-bottom:14px;display:block;}
-.opt-title{font-size:18px;font-weight:900;letter-spacing:-.3px;margin-bottom:6px;color:var(--wh);}
-.opt-desc{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:16px;}
-.opt-cta{display:inline-flex;align-items:center;gap:6px;font-family:'Roboto Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
-.opt-gold .opt-cta{color:var(--gold);}
-.opt-blue .opt-cta{color:var(--blue);}
-.opt-cta-arrow{transition:transform .2s;}
-.option-card:hover .opt-cta-arrow{transform:translateX(3px);}
+/* ── Q PROGRESS ── */
+.q-progress{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--c1);border:1px solid var(--b1);border-radius:10px;margin-bottom:18px;}
+.qp-dots{display:flex;gap:5px;}
+.qp-dot{width:9px;height:9px;border-radius:50%;background:var(--c2);transition:all .3s;}
+.qp-dot.filled{background:var(--gold);box-shadow:0 0 6px rgba(242,107,69,.5);transform:scale(1.1);}
+.qp-label{font-size:11px;color:var(--muted);font-family:'Roboto Mono',monospace;letter-spacing:.5px;}
 
-.divider-or{display:flex;align-items:center;gap:14px;margin:8px 0 24px;}
-.divider-or::before,.divider-or::after{content:'';flex:1;height:1px;background:var(--b1);}
-.divider-or span{font-size:10px;color:var(--muted2);font-family:'Roboto Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;}
+/* ── QUESTION BLOCKS ── */
+.q-block{background:var(--c1);border:1px solid var(--b1);border-radius:12px;padding:15px;margin-bottom:12px;transition:border-color .25s,box-shadow .25s;}
+.q-block.answered{border-color:rgba(242,107,69,.22);box-shadow:0 2px 12px rgba(242,107,69,.07);}
+.q-tag{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+.q-lbl{font-size:13px;font-weight:500;margin-bottom:12px;line-height:1.5;color:var(--wh);}
+.q-opts{display:flex;flex-direction:column;gap:6px;}
+.opt{display:flex;align-items:center;gap:10px;cursor:pointer;padding:11px 13px;background:var(--c2);border:1px solid transparent;border-radius:8px;transition:all .18s;}
+.opt:hover{background:var(--c3);border-color:rgba(255,255,255,.05);}
+.opt.sel{background:rgba(242,107,69,.08);border-color:rgba(242,107,69,.25);}
+.opt-radio{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .18s;}
+.opt.sel .opt-radio{border-color:var(--gold);background:var(--gold);}
+.opt.sel .opt-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:#080D14;}
+.opt-text{font-size:13px;color:var(--wh);line-height:1.4;flex:1;}
+.yn-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.yn-opt{display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;padding:14px;background:var(--c2);border:1px solid transparent;border-radius:8px;transition:all .18s;font-size:14px;font-weight:500;color:var(--muted);}
+.yn-opt:hover{background:var(--c3);}
+.yn-opt.sel-yes{background:rgba(242,107,69,.1);border-color:rgba(242,107,69,.28);color:var(--gold);}
+.yn-opt.sel-no{background:rgba(208,80,80,.08);border-color:rgba(208,80,80,.22);color:var(--red);}
 
-.bottom-info{margin-top:auto;text-align:center;padding-top:28px;}
-.bottom-info p{font-size:11px;color:var(--muted2);line-height:1.7;}
-.bottom-info a{color:var(--gold);text-decoration:none;}
+/* ── FILE UPLOADS ── */
+.file-upload{position:relative;background:var(--c1);border:1.5px dashed rgba(255,255,255,.1);border-radius:11px;padding:18px 14px;margin-bottom:11px;text-align:center;cursor:pointer;transition:all .2s;overflow:hidden;}
+.file-upload::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(242,107,69,.04),transparent);opacity:0;transition:opacity .2s;}
+.file-upload:hover,.file-upload.has-file{border-color:var(--gold-border);}
+.file-upload:hover::before,.file-upload.has-file::before{opacity:1;}
+.file-upload input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.fu-icon{font-size:24px;margin-bottom:7px;display:block;}
+.fu-title{font-size:13px;font-weight:600;color:var(--wh);margin-bottom:3px;}
+.fu-sub{font-size:11px;color:var(--muted);line-height:1.5;}
+.fu-hint{display:flex;gap:5px;justify-content:center;margin-top:7px;flex-wrap:wrap;}
+.fu-pill{font-size:9px;padding:2px 8px;border-radius:20px;background:var(--c2);color:var(--muted);font-family:'Roboto Mono',monospace;border:1px solid var(--b1);}
+.fu-name{font-size:11px;color:var(--gold);margin-top:7px;font-family:'Roboto Mono',monospace;word-break:break-all;}
+.cedula-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 
-.trust-row{display:flex;justify-content:center;gap:18px;margin-top:18px;flex-wrap:wrap;}
-.trust-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted2);font-family:'Roboto Mono',monospace;letter-spacing:.3px;}
-.trust-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);}
+/* ── REFERENCES ── */
+.ref-block{background:var(--c1);border:1px solid var(--b1);border-radius:11px;padding:14px;margin-bottom:11px;}
+.ref-tag{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:11px;display:block;}
+
+/* ── CONSENT ── */
+.consent-row{display:flex;align-items:flex-start;gap:11px;padding:12px;background:var(--c1);border:1px solid var(--b1);border-radius:9px;margin-bottom:16px;cursor:pointer;transition:border-color .2s;}
+.consent-row:hover{border-color:var(--gold-border);}
+.consent-row input[type=checkbox]{width:17px;height:17px;flex-shrink:0;accent-color:var(--gold);cursor:pointer;margin-top:2px;}
+.consent-text{font-size:12px;color:var(--muted);line-height:1.6;}
+.consent-text strong{color:var(--wh);}
+
+/* ── BUTTONS ── */
+.btn-row{padding:18px 22px 36px;}
+.btn-primary{width:100%;padding:15px;background:linear-gradient(135deg,var(--gold3),var(--gold),var(--gold2));border:none;border-radius:10px;color:#000;font-family:'Roboto',sans-serif;font-size:15px;font-weight:900;cursor:pointer;transition:all .2s;letter-spacing:.5px;box-shadow:0 4px 20px rgba(242,107,69,.3);}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(242,107,69,.45);}
+.btn-primary:active{transform:translateY(0);}
+.btn-primary:disabled{background:#1a1a1a;color:var(--muted2);cursor:not-allowed;box-shadow:none;transform:none;}
+.btn-back{width:100%;padding:13px;background:none;border:1px solid var(--b1);border-radius:10px;color:var(--muted);font-family:'Roboto',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;margin-bottom:10px;}
+.btn-back:hover{border-color:var(--gold-border);color:var(--gold);}
+
+/* ── LOADING ── */
+.load-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:20px;}
+.load-overlay.on{display:flex;}
+.load-logo{width:70px;height:70px;object-fit:contain;filter:none;animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.75;}}50%{opacity:.7;filter:none;}}
+.spinner{width:36px;height:36px;border:2px solid rgba(242,107,69,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-msg{font-family:'Roboto Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+
+/* ── CONFIRMATION ── */
+#conf{padding:28px 22px 50px;text-align:center;}
+.conf-hero{background:#080D14;border-bottom:1px solid rgba(242,107,69,.12);padding:28px 0 24px;margin:-28px -22px 24px;text-align:center;}
+.conf-logo{width:90px;height:90px;object-fit:contain;margin:0 auto 12px;display:block;filter:none;}
+.conf-brand{font-size:30px;font-weight:900;letter-spacing:-1.4px;color:var(--wh);text-transform:lowercase;}
+.conf-headline{font-size:22px;font-weight:900;letter-spacing:-.5px;margin-bottom:5px;}
+.conf-sub{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+.conf-id-box{padding:16px;background:var(--gold-dim);border:1px solid var(--gold-border);border-radius:12px;margin-bottom:14px;}
+.conf-id-lbl{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:6px;}
+.conf-id-val{font-family:'Roboto Mono',monospace;font-size:22px;font-weight:700;color:var(--wh);}
+.conf-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;}
+.conf-card{background:var(--c1);border:1px solid var(--b1);border-radius:10px;padding:13px 15px;display:flex;justify-content:space-between;align-items:center;}
+.cc-lbl{font-size:10px;color:var(--muted);font-family:'Roboto Mono',monospace;letter-spacing:.5px;text-transform:uppercase;}
+.cc-val{font-family:'Roboto Mono',monospace;font-size:14px;font-weight:600;color:var(--wh);}
+.cc-val.gold{color:var(--gold);}
+.next-block{background:var(--c1);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:16px 16px 16px 18px;margin-bottom:16px;text-align:left;}
+.nb-tag{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:12px;}
+.doc-prog{margin:16px 0;padding:14px 16px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);}
+.doc-prog-tag{font-family:'Roboto Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;margin-bottom:10px;}
+.doc-line{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);padding:3px 0;line-height:1.6;}
+.doc-line .dl-st{white-space:nowrap;font-weight:700;}
+.doc-line .dl-st.ok{color:#5FBF7F;}
+.doc-line .dl-st.err{color:#E05C5C;}
+.doc-prog-nota{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px;}
+.nb-item{display:flex;gap:9px;font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.6;align-items:flex-start;}
+.nb-num{color:var(--gold);font-weight:700;flex-shrink:0;font-family:'Roboto Mono',monospace;}
+.wa-btn{width:100%;padding:14px;background:#25D366;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px;}
+.wa-btn:hover{background:#1ebe58;transform:translateY(-1px);}
+@media(max-width:360px){.cedula-pair{grid-template-columns:1fr;}}
+
+/* Volver al inicio. Flotante arriba-izquierda: no compite con el
+   contenido y queda igual en todas las paginas del ecosistema. */
+.btn-inicio{position:fixed;top:14px;left:14px;z-index:150;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 13px;border-radius:20px;text-decoration:none;
+  background:rgba(13,20,29,.82);border:1px solid rgba(255,255,255,.12);
+  color:#8593A2;font-family:'Roboto',sans-serif;font-size:11.5px;font-weight:500;
+  backdrop-filter:blur(8px);transition:all .2s;}
+.btn-inicio:hover{color:#F26B45;border-color:rgba(242,107,69,.4);}
+.btn-inicio span{font-size:13px;line-height:1;}
+@media (max-width:420px){.btn-inicio{font-size:10.5px;padding:7px 11px;}}
 </style>
 </head>
 <body>
+<a class="btn-inicio" href="https://tribu-gps-credito.vercel.app/" aria-label="Volver al inicio"><span>←</span> Inicio</a>
+
 <div class="shell">
 
-  <div class="hero">
-    <img class="logo-hero" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23F26B45%22%20stroke-width%3D%229%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M25%2028L47%2050L25%2072%22%20opacity%3D%220.38%22%2F%3E%3Cpath%20d%3D%22M53%2028L75%2050L53%2072%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E" alt="vamo">
-    <div class="hero-brand">vamo</div>
-    <div class="hero-sub">Crédito para moverte</div>
+<!-- HERO CON LOGO PROMINENTE -->
+<div class="hero">
+  <img class="logo-hero" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23F26B45%22%20stroke-width%3D%229%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M25%2028L47%2050L25%2072%22%20opacity%3D%220.38%22%2F%3E%3Cpath%20d%3D%22M53%2028L75%2050L53%2072%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E" alt="vamo">
+  <div class="hero-brand">vamo</div>
+  <div class="hero-sub">Crédito para moverte</div>
+</div>
+
+<!-- PROGRESS -->
+<div class="prog-wrap">
+  <div class="prog-bars"><div class="pb active" id="pb1"></div><div class="pb" id="pb2"></div><div class="pb" id="pb3"></div></div>
+  <div class="prog-lbl"><span id="prog-step">PASO 01 / 03</span><span id="prog-name">DATOS PERSONALES</span></div>
+</div>
+
+<!-- ══ STEP 1 ══ -->
+<div class="step-wrap">
+<div class="step active" id="s1">
+  <div class="eyebrow">Solicitud de Crédito</div>
+  <div class="step-title">Cuéntanos sobre ti</div>
+  <div class="step-sub">Tus datos están protegidos. Solo los revisa el equipo de vamo.</div>
+  <div class="intro-pill"><span style="font-size:18px;flex-shrink:0;margin-top:1px">⚡</span><div class="ip-text">Financiamos vehículos eléctricos con <strong>pagos quincenales o mensuales</strong>.</div></div>
+  <div class="fi"><label>Nombre completo</label><input id="nombre" placeholder="Ej: Juan Carlos Pérez García" type="text" autocomplete="name"><div class="err" id="err-nombre">Escribe tu nombre completo.</div></div>
+  <div class="fi-row">
+    <div class="fi"><label>Cédula</label><input id="cedula" placeholder="1012345678" type="number"><div class="err" id="err-cedula">Ingresa tu cédula.</div></div>
+    <div class="fi"><label>WhatsApp</label><input id="telefono" placeholder="300 123 4567" type="tel"><div class="err" id="err-tel">Ingresa tu número.</div></div>
+  </div>
+  <div class="fi"><label>Correo electrónico</label><input id="email" placeholder="tu@correo.com" type="email" autocomplete="email"><div class="err" id="err-email">Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.</div></div>
+  <div style="font-size:11px;color:var(--muted);margin:-10px 0 14px;line-height:1.5;display:flex;gap:6px;align-items:flex-start"><span style="flex-shrink:0">ℹ️</span><span>Con este correo creamos tu acceso para consultar tu crédito y pagar en línea cuando tu solicitud sea aprobada.</span></div>
+  <div class="fi-row">
+    <div class="fi"><label>Ciudad</label><input id="ciudad" placeholder="Bogotá"></div>
+    <div class="fi"><label>Barrio</label><input id="barrio" placeholder="Kennedy"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="fi">
+    <label>Valor comercial del vehículo (COP)</label>
+    <input id="vehiculo" type="number" placeholder="Ej: 4500000" min="500000" step="10000">
+    <div class="err" id="err-vehiculo">Ingresa el valor del vehículo.</div>
+    <div class="aviso-inicial" id="aviso-inicial"></div>
   </div>
 
-  <div class="body-wrap">
-    <p class="intro-text">Financiamos vehículos eléctricos con GPS incluido como respaldo del crédito. ¿Qué necesitas hoy?</p>
+  <!-- Resumen de financiacion: aparece solo cuando ya hay un valor.
+       Se muestra desglosado para que el cliente vea de una vez cuanto
+       pone el y cuanto financiamos nosotros, sin sorpresas al final. -->
+  <div class="resumen-fin" id="resumen-fin">
+    <div class="rf-row"><span>Valor del vehículo</span><b id="rf-valor">$0</b></div>
+    <div class="rf-row" id="rf-row-inicial"><span>Tu cuota inicial</span><b id="rf-inicial">$0</b></div>
+    <div class="rf-row rf-total"><span>Financiamos</span><b id="rf-financiar">$0</b></div>
+  </div>
 
-    <a href="solicitar-credito.html" class="option-card opt-gold">
-      <span class="opt-icon">⚡</span>
-      <div class="opt-title">Solicitar un crédito</div>
-      <div class="opt-desc">Aplica en minutos para financiar tu moto eléctrica. Evaluamos tu solicitud en 24–48 horas.</div>
-      <span class="opt-cta">Empezar solicitud <span class="opt-cta-arrow">→</span></span>
-    </a>
+  <div class="fi">
+    <label>Marca y modelo del vehículo</label>
+    <input id="modelo" placeholder="Ej: Starker Nitro 2024">
+    <div class="err" id="err-modelo">Cuéntanos qué vehículo es.</div>
+  </div>
+  <div class="fi">
+    <label>Punto de venta o tienda</label>
+    <input id="concesionario" placeholder="¿Dónde lo estás comprando?">
+    <div class="err" id="err-concesionario">Indícanos dónde lo compras.</div>
+  </div>
+  <div class="fi">
+    <label>¿Quién te atendió?</label>
+    <input id="vendedor" placeholder="Nombre de quien te atendió">
+    <div class="err" id="err-vendedor">Cuéntanos quién te atendió.</div>
+  </div>
+  <div class="fi">
+    <label>¿Para qué lo usarás?</label>
+    <select id="uso">
+      <option value="trabajo">Trabajo — domicilios, mensajería, plataformas</option>
+      <option value="personal">Uso personal o familiar</option>
+      <option value="negocio">Negocio propio</option>
+    </select>
+  </div>
+  <div class="fi">
+    <label>¿Cómo prefieres pagar tu crédito?</label>
+    <select id="periodicidad">
+      <option value="quincenal">Quincenal — 24 pagos en 12 meses</option>
+      <option value="mensual">Mensual — 12 pagos en 12 meses</option>
+    </select>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5">Quincenal: cuotas más pequeñas, pagas cada 15 días. Mensual: cuotas más grandes, pagas una vez al mes.</div>
+  </div>
+</div>
 
-    <a href="simular-credito.html" class="option-card opt-blue">
-      <span class="opt-icon">🧮</span>
-      <div class="opt-title">Simular mi crédito</div>
-      <div class="opt-desc">Calcula tu cuota antes de aplicar. Sin compromiso y sin dejar tus datos.</div>
-      <span class="opt-cta">Hacer una simulación <span class="opt-cta-arrow">→</span></span>
-    </a>
+<!-- ══ STEP 2 ══ -->
+<div class="step" id="s2">
+  <div class="eyebrow">Evaluación</div>
+  <div class="step-title">Tu perfil financiero</div>
+  <div class="step-sub">Responde con honestidad — la información se verifica. No hay respuestas mejores ni peores.</div>
+  <div class="q-progress">
+    <div class="qp-dots"><div class="qp-dot" id="qd1"></div><div class="qp-dot" id="qd2"></div><div class="qp-dot" id="qd3"></div><div class="qp-dot" id="qd4"></div><div class="qp-dot" id="qd5"></div><div class="qp-dot" id="qd6"></div><div class="qp-dot" id="qd7"></div></div>
+    <div class="qp-label" id="qp-lbl">0 DE 7 PREGUNTAS</div>
+  </div>
 
-    <div class="divider-or"><span>o si ya tienes crédito</span></div>
+  <div class="q-block" id="qb1"><div class="q-tag">Pregunta 01</div><div class="q-lbl">¿Cuánto ingreso recibes al mes?</div><div class="q-opts">
+    <div class="opt" onclick="setQ('income_gross','5m',25,this,1)"><div class="opt-radio"></div><span class="opt-text">Más de $5.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_gross','4-5m',21,this,1)"><div class="opt-radio"></div><span class="opt-text">Entre $4.000.000 y $5.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_gross','3-4m',16,this,1)"><div class="opt-radio"></div><span class="opt-text">Entre $3.000.000 y $4.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_gross','2-3m',10,this,1)"><div class="opt-radio"></div><span class="opt-text">Entre $2.000.000 y $3.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_gross','2m',3,this,1)"><div class="opt-radio"></div><span class="opt-text">Menos de $2.000.000 COP</span></div>
+  </div></div>
 
-    <a href="https://tribu-gps-portal.vercel.app" class="option-card opt-blue">
-      <span class="opt-icon">💳</span>
-      <div class="opt-title">Ver mi estado de cuenta</div>
-      <div class="opt-desc">Consulta tu saldo, próxima cuota, historial de pagos y paga en línea sin filas ni esperas.</div>
-      <span class="opt-cta">Ingresar al portal <span class="opt-cta-arrow">→</span></span>
-    </a>
+  <div class="q-block" id="qb2"><div class="q-tag">Pregunta 02</div><div class="q-lbl">¿Cuánto dinero te queda después de todos tus gastos?</div><div class="q-opts">
+    <div class="opt" onclick="setQ('income_net','2m',20,this,2)"><div class="opt-radio"></div><span class="opt-text">Más de $2.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_net','1-2m',14,this,2)"><div class="opt-radio"></div><span class="opt-text">Entre $1.000.000 y $2.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_net','500k-1m',7,this,2)"><div class="opt-radio"></div><span class="opt-text">Entre $500.000 y $1.000.000 COP</span></div>
+    <div class="opt" onclick="setQ('income_net','500k',1,this,2)"><div class="opt-radio"></div><span class="opt-text">Menos de $500.000 COP</span></div>
+  </div></div>
 
-    <div class="divider-or"><span>o si financiaste vehículos</span></div>
-
-    <a href="https://tribu-gps-portal.vercel.app/vamo-inversionistas.html" class="option-card opt-blue">
-      <span class="opt-icon">📊</span>
-      <div class="opt-title">Ver mi portafolio</div>
-      <div class="opt-desc">Revisa los vehículos que financiaste, cuánto has recuperado y cómo va cada crédito.</div>
-      <span class="opt-cta">Entrar al portafolio <span class="opt-cta-arrow">→</span></span>
-    </a>
-
-    <div class="bottom-info">
-      <div class="trust-row">
-        <div class="trust-item"><span class="trust-dot"></span>GPS incluido</div>
-        <div class="trust-item"><span class="trust-dot"></span>Pagos quincenales o mensuales</div>
-        <div class="trust-item"><span class="trust-dot"></span>100% en línea</div>
-      </div>
-      <p style="margin-top:18px">vamo es una marca operada por Tribu GPS SAS · NIT 901.356.553-8<br>¿Dudas? Escríbenos por <a href="https://wa.me/573212548620">WhatsApp</a></p>
+  <div class="q-block" id="qb3"><div class="q-tag">Pregunta 03</div><div class="q-lbl">¿Recibes tus ingresos de forma quincenal?</div>
+    <div class="yn-opts">
+      <div class="yn-opt" id="yn3-si" onclick="setYN('quincenal','si',5,3)">✓ &nbsp;Sí</div>
+      <div class="yn-opt" id="yn3-no" onclick="setYN('quincenal','no',0,3)">✗ &nbsp;No</div>
     </div>
   </div>
 
+  <div class="q-block" id="qb4"><div class="q-tag">Pregunta 04</div><div class="q-lbl">¿Cómo es tu situación laboral?</div><div class="q-opts">
+    <div class="opt" onclick="setQ('employment','formal_2y',20,this,4)"><div class="opt-radio"></div><span class="opt-text">Empleado formal hace más de 2 años</span></div>
+    <div class="opt" onclick="setQ('employment','formal_1y',15,this,4)"><div class="opt-radio"></div><span class="opt-text">Empleado formal hace 1–2 años</span></div>
+    <div class="opt" onclick="setQ('employment','indep_1y',15,this,4)"><div class="opt-radio"></div><span class="opt-text">Independiente estable hace más de 1 año</span></div>
+    <div class="opt" onclick="setQ('employment','recent',10,this,4)"><div class="opt-radio"></div><span class="opt-text">Empleado reciente o independiente menos de 1 año</span></div>
+    <div class="opt" onclick="setQ('employment','informal',5,this,4)"><div class="opt-radio"></div><span class="opt-text">Trabajo informal o variable</span></div>
+  </div></div>
+
+  <div class="q-block" id="qb5"><div class="q-tag">Pregunta 05</div><div class="q-lbl">¿Tienes deudas o créditos vigentes?</div><div class="q-opts">
+    <div class="opt" onclick="setQ('debts','none',15,this,5)"><div class="opt-radio"></div><span class="opt-text">No tengo deudas</span></div>
+    <div class="opt" onclick="setQ('debts','one',10,this,5)"><div class="opt-radio"></div><span class="opt-text">1 crédito al día</span></div>
+    <div class="opt" onclick="setQ('debts','two',5,this,5)"><div class="opt-radio"></div><span class="opt-text">2 créditos al día</span></div>
+    <div class="opt" onclick="setQ('debts','three',2,this,5)"><div class="opt-radio"></div><span class="opt-text">3 o más créditos al día</span></div>
+    <div class="opt" onclick="setQ('debts','mora',0,this,5)"><div class="opt-radio"></div><span class="opt-text" style="color:var(--red)">Tengo deudas en mora</span></div>
+  </div></div>
+
+  <div class="q-block" id="qb6"><div class="q-tag">Pregunta 06</div><div class="q-lbl">¿Cuál es tu situación de vivienda?</div><div class="q-opts">
+    <div class="opt" onclick="setQ('residence','own_prop',10,this,6)"><div class="opt-radio"></div><span class="opt-text">Propia — eres propietario(a) del inmueble</span></div>
+    <div class="opt" onclick="setQ('residence','own_family',8,this,6)"><div class="opt-radio"></div><span class="opt-text">Familiar estable — vives con familia hace más de 2 años</span></div>
+    <div class="opt" onclick="setQ('residence','rent_1y',7,this,6)"><div class="opt-radio"></div><span class="opt-text">Arriendo hace más de 1 año en la misma dirección</span></div>
+    <div class="opt" onclick="setQ('residence','rent_6m',4,this,6)"><div class="opt-radio"></div><span class="opt-text">Arriendo hace menos de 1 año</span></div>
+    <div class="opt" onclick="setQ('residence','mobile',0,this,6)"><div class="opt-radio"></div><span class="opt-text">Sin dirección fija</span></div>
+  </div></div>
+
+  <div class="q-block" id="qb7"><div class="q-tag">Pregunta 07</div><div class="q-lbl">¿Cuántas referencias personales puedes darnos?</div><div class="q-opts">
+    <div class="opt" onclick="setQ('references','two_plus',10,this,7)"><div class="opt-radio"></div><span class="opt-text">2 o más personas que contestarían nuestra llamada</span></div>
+    <div class="opt" onclick="setQ('references','one',3,this,7)"><div class="opt-radio"></div><span class="opt-text">1 referencia</span></div>
+    <div class="opt" onclick="setQ('references','none',0,this,7)"><div class="opt-radio"></div><span class="opt-text">No tengo referencias disponibles</span></div>
+  </div></div>
 </div>
+
+<!-- ══ STEP 3 ══ -->
+<div class="step" id="s3">
+  <div class="eyebrow">Documentación</div>
+  <div class="step-title">Sube tus soportes</div>
+  <div class="step-sub">Toma fotos directamente o adjunta archivos. Tus documentos van a una carpeta privada en nuestro sistema. SI NO TIENES LOS DOCUMENTOS EN ESTE MOMENTO, FINALIZA EL FORMULARIO Y CUANDO TE CONTACTEMOS NOS ENVIAS LA INFORMACIÓN.</div>
+
+  <div class="fi"><label>Cédula de ciudadanía — frente y reverso</label></div>
+  <div class="cedula-pair">
+    <div class="file-upload" id="fu-ced-f">
+      <input type="file" id="file-ced-f" accept="image/*,.pdf" onchange="fileSelected('fu-ced-f','file-ced-f','fn-ced-f')">
+      <span class="fu-icon">🪪</span><div class="fu-title">Parte delantera</div>
+      <div class="fu-hint"><span class="fu-pill">📷 CÁMARA</span><span class="fu-pill">🗂 ARCHIVO</span></div>
+      <div class="fu-name" id="fn-ced-f"></div>
+    </div>
+    <div class="file-upload" id="fu-ced-b">
+      <input type="file" id="file-ced-b" accept="image/*,.pdf" onchange="fileSelected('fu-ced-b','file-ced-b','fn-ced-b')">
+      <span class="fu-icon">🪪</span><div class="fu-title">Parte trasera</div>
+      <div class="fu-hint"><span class="fu-pill">📷 CÁMARA</span><span class="fu-pill">🗂 ARCHIVO</span></div>
+      <div class="fu-name" id="fn-ced-b"></div>
+    </div>
+  </div>
+
+  <div class="file-upload" id="fu-ing">
+    <input type="file" id="file-ing" accept="image/*,.pdf" onchange="fileSelected('fu-ing','file-ing','fn-ing')">
+    <span class="fu-icon">💰</span><div class="fu-title">Comprobante de ingresos</div>
+    <div class="fu-sub">Nómina, extracto bancario o pantallazo Nequi / Daviplata</div>
+    <div class="fu-hint"><span class="fu-pill">📷 CÁMARA</span><span class="fu-pill">🗂 ARCHIVO</span></div>
+    <div class="fu-name" id="fn-ing"></div>
+  </div>
+
+  <div class="file-upload" id="fu-dom">
+    <input type="file" id="file-dom" accept="image/*,.pdf" onchange="fileSelected('fu-dom','file-dom','fn-dom')">
+    <span class="fu-icon">🏠</span><div class="fu-title">Comprobante de domicilio</div>
+    <div class="fu-sub">Recibo de servicios — máx 2 meses de antigüedad</div>
+    <div class="fu-hint"><span class="fu-pill">📷 CÁMARA</span><span class="fu-pill">🗂 ARCHIVO</span></div>
+    <div class="fu-name" id="fn-dom"></div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="ref-block"><span class="ref-tag">Referencia Personal 01</span>
+    <div class="fi-row">
+      <div class="fi" style="margin:0"><label>Nombre</label><input id="ref1n" placeholder="Nombre completo"></div>
+      <div class="fi" style="margin:0"><label>Celular</label><input id="ref1t" placeholder="300 000 0000" type="tel"></div>
+    </div>
+  </div>
+  <div class="ref-block"><span class="ref-tag">Referencia Personal 02</span>
+    <div class="fi-row">
+      <div class="fi" style="margin:0"><label>Nombre</label><input id="ref2n" placeholder="Nombre completo"></div>
+      <div class="fi" style="margin:0"><label>Celular</label><input id="ref2t" placeholder="300 000 0000" type="tel"></div>
+    </div>
+  </div>
+  <div class="consent-row" onclick="document.getElementById('consent').click()">
+    <input type="checkbox" id="consent">
+    <div class="consent-text">Autorizo a <strong>Tribu GPS SAS</strong> para verificar y almacenar mis datos y documentos con fines de evaluación crediticia, conforme a la Ley 1581 de 2012.</div>
+  </div>
+  <div class="err" id="err-consent">Debes aceptar los términos para continuar.</div>
+</div>
+
+<!-- ══ CONFIRMACIÓN ══ -->
+<div class="step" id="conf">
+  <div class="conf-hero">
+    <img class="conf-logo" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23F26B45%22%20stroke-width%3D%229%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M25%2028L47%2050L25%2072%22%20opacity%3D%220.38%22%2F%3E%3Cpath%20d%3D%22M53%2028L75%2050L53%2072%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E" alt="vamo">
+    <div class="conf-brand">vamo</div>
+  </div>
+  <div class="conf-headline">¡Solicitud enviada!</div>
+  <div class="conf-sub">El equipo de vamo verificará tus documentos en las próximas 24–48 horas y te contactará por WhatsApp.</div>
+  <div class="conf-id-box"><div class="conf-id-lbl">Tu ID de solicitud</div><div class="conf-id-val" id="conf-id">TG-2025-—</div></div>
+  <div class="conf-cards">
+    <div class="conf-card" style="border-color:rgba(242,107,69,.3);background:rgba(242,107,69,.06)"><span class="cc-lbl">Estado de tu solicitud</span><span class="cc-val gold">En evaluación</span></div>
+    <div class="conf-card"><span class="cc-lbl">Tiempo de respuesta</span><span class="cc-val">24–48 horas hábiles</span></div>
+  </div>
+  <div class="doc-prog" id="doc-prog" style="display:none">
+    <div class="doc-prog-tag" id="doc-prog-tag">Subiendo tus documentos</div>
+    <div id="doc-prog-list"></div>
+    <div class="doc-prog-nota" id="doc-prog-nota"></div>
+  </div>
+  <div class="next-block">
+    <div class="nb-tag">Próximos pasos</div>
+    <div class="nb-item"><span class="nb-num">01.</span><span>El equipo revisa tus documentos en 24–48 horas.</span></div>
+    <div class="nb-item"><span class="nb-num">02.</span><span>Te contactamos por WhatsApp con la respuesta final.</span></div>
+    <div class="nb-item"><span class="nb-num">03.</span><span>Si es aprobado, coordinamos la entrega y la instalación del GPS.</span></div>
+  </div>
+  <button class="wa-btn" onclick="openWA()">💬 Escribir a vamo por WhatsApp</button>
+</div>
+
+</div><!-- /step-wrap -->
+
+<div class="btn-row" id="btn-row">
+  <button class="btn-back" id="btn-back" onclick="goBack()" style="display:none">← Atrás</button>
+  <button class="btn-primary" id="btn-next" onclick="goNext()">Continuar →</button>
+</div>
+</div><!-- /shell -->
+
+<div class="load-overlay" id="loading">
+  <img class="load-logo" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23F26B45%22%20stroke-width%3D%229%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M25%2028L47%2050L25%2072%22%20opacity%3D%220.38%22%2F%3E%3Cpath%20d%3D%22M53%2028L75%2050L53%2072%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E" alt="">
+  <div class="spinner" style="margin-top:8px"></div>
+  <div class="load-msg" id="load-msg">ENVIANDO SOLICITUD...</div>
+</div>
+
+<script>
+var N8N_WEBHOOK='https://tribugps.pikapod.net/webhook/credit-form';
+// Los documentos suben por su propio webhook, DESPUES de que el lead ya
+// quedo registrado. Antes viajaban dentro del mismo POST del formulario:
+// si los archivos eran grandes o la conexion del cliente flaqueaba, el
+// envio entero fallaba y el lead se perdia aunque los datos estuvieran
+// perfectos. Ahora un documento que falla no cuesta la solicitud.
+var N8N_WEBHOOK_DOCS='https://tribugps.pikapod.net/webhook/subir-documento';
+var WA_NUMBER='573212548620';
+var curStep=1,scoreData={},answeredCount=0;
+function goNext(){if(curStep===1){if(!val1())return;goTo(2);}else if(curStep===2){if(answeredCount<7){alert('Por favor responde todas las preguntas antes de continuar.');return;}goTo(3);}else if(curStep===3){doSubmit();}}
+function goBack(){if(curStep>1)goTo(curStep-1);}
+function goTo(n){document.getElementById('s'+curStep).classList.remove('active');curStep=n;var el=n<4?document.getElementById('s'+n):document.getElementById('conf');if(el)el.classList.add('active');updateUI();window.scrollTo(0,0);}
+function updateUI(){var labels=['','DATOS PERSONALES','EVALUACIÓN','DOCUMENTACIÓN'];var steps=['','PASO 01 / 03','PASO 02 / 03','PASO 03 / 03'];for(var i=1;i<=3;i++){var p=document.getElementById('pb'+i);if(p)p.className='pb'+(i<curStep?' done':i===curStep?' active':'');}document.getElementById('prog-step').textContent=steps[curStep]||'';document.getElementById('prog-name').textContent=labels[curStep]||'';var bb=document.getElementById('btn-back');if(bb)bb.style.display=curStep>1&&curStep<4?'block':'none';var bn=document.getElementById('btn-next');if(bn)bn.textContent=curStep===3?'Enviar solicitud →':'Continuar →';if(curStep>=4){var br=document.getElementById('btn-row');if(br)br.style.display='none';var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';}}
+// Tope de financiacion. Por encima de esto el cliente debe poner cuota
+// inicial por la diferencia.
+var TOPE_FINANCIABLE = 5500000;
+
+// ═══ VENDEDOR ═══
+// Texto libre, porque los vendedores son muchos y cambian. Pero se
+// normaliza antes de guardar: sin esto, "juan perez", "JUAN PEREZ" y
+// "Juan  Perez" quedan como tres vendedores distintos y el reporte de
+// atribucion pierde sentido.
+//
+// Se respetan las particulas en minuscula (de, del, la, los) para que
+// "maria de los angeles" no quede como "Maria De Los Angeles".
+function normalizarNombre(txt){
+  var particulas = ['de','del','la','las','los','y','da','di'];
+  return (txt || '')
+    .trim()
+    .replace(/\s+/g, ' ')                 // varios espacios -> uno
+    .toLowerCase()
+    .split(' ')
+    .map(function(p, i){
+      if (i > 0 && particulas.indexOf(p) !== -1) return p;
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    })
+    .join(' ');
+}
+
+function vendedorElegido(){
+  return normalizarNombre(document.getElementById('vendedor').value);
+}
+
+function fmtCOP(n){ return '$' + Math.round(n).toLocaleString('es-CO'); }
+
+// Devuelve el desglose de la financiacion para un valor de vehiculo.
+// Se calcula aqui una sola vez y lo usan tanto el resumen como el envio,
+// para que no haya dos formulas que puedan desincronizarse.
+function desglose(valorVehiculo){
+  var inicial   = Math.max(0, valorVehiculo - TOPE_FINANCIABLE);
+  var financiar = Math.min(valorVehiculo, TOPE_FINANCIABLE);
+  return { valor: valorVehiculo, inicial: inicial, financiar: financiar };
+}
+
+function revisarMonto(){
+  var veh   = parseInt(document.getElementById('vehiculo').value) || 0;
+  var aviso = document.getElementById('aviso-inicial');
+  var res   = document.getElementById('resumen-fin');
+
+  if (veh < 500000) {
+    aviso.classList.remove('on');
+    res.classList.remove('on');
+    return;
+  }
+
+  var d = desglose(veh);
+
+  document.getElementById('rf-valor').textContent     = fmtCOP(d.valor);
+  document.getElementById('rf-inicial').textContent   = fmtCOP(d.inicial);
+  document.getElementById('rf-financiar').textContent = fmtCOP(d.financiar);
+  // La fila de cuota inicial solo tiene sentido si hay algo que pagar
+  document.getElementById('rf-row-inicial').style.display = d.inicial > 0 ? 'flex' : 'none';
+  res.classList.add('on');
+
+  if (d.inicial > 0) {
+    aviso.innerHTML =
+      'Financiamos hasta <b>' + fmtCOP(TOPE_FINANCIABLE) + '</b> por vehículo. ' +
+      'Para este necesitas una cuota inicial de <b>' + fmtCOP(d.inicial) + '</b>.';
+    aviso.classList.add('on');
+  } else {
+    aviso.classList.remove('on');
+  }
+}
+
+document.getElementById('vehiculo').addEventListener('input', revisarMonto);
+
+function val1(){var ok=true;[['nombre','err-nombre'],['cedula','err-cedula'],['telefono','err-tel']].forEach(function(c){var v=document.getElementById(c[0]).value.trim();var e=document.getElementById(c[1]);if(!v){e.classList.add('on');ok=false;}else{e.classList.remove('on');}});var emailVal=document.getElementById('email').value.trim();var emailErr=document.getElementById('err-email');var emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal);if(!emailOk){emailErr.textContent=emailVal?'Ese correo no se ve válido — revísalo.':'Ingresa tu correo — lo necesitamos para tu acceso al portal de pagos.';emailErr.classList.add('on');ok=false;}else{emailErr.classList.remove('on');}var veh=parseInt(document.getElementById('vehiculo').value)||0;var ev=document.getElementById('err-vehiculo');
+if(veh<500000){ev.textContent='Ingresa el valor del vehículo.';ev.classList.add('on');ok=false;}
+else{ev.classList.remove('on');}
+// Modelo y punto de venta: van en la carta de pre-aprobacion, por eso
+// se piden desde el formulario y no despues.
+var mod=document.getElementById('modelo').value.trim();
+var em=document.getElementById('err-modelo');
+if(!mod){em.classList.add('on');ok=false;}else{em.classList.remove('on');}
+var con=document.getElementById('concesionario').value.trim();
+var ec=document.getElementById('err-concesionario');
+if(!con){ec.classList.add('on');ok=false;}else{ec.classList.remove('on');}
+var ven=vendedorElegido();
+var ev=document.getElementById('err-vendedor');
+if(!ven){ev.classList.add('on');ok=false;}else{ev.classList.remove('on');}
+revisarMonto();
+return ok;}
+function setQ(key,val,pts,el,di){el.closest('.q-block').querySelectorAll('.opt').forEach(function(o){o.classList.remove('sel');});el.classList.add('sel');el.closest('.q-block').classList.add('answered');var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};if(isNew)answeredCount++;updateDots();}
+function setYN(key,val,pts){var isNew=!scoreData[key];scoreData[key]={val:val,pts:pts};document.getElementById('yn3-si').className='yn-opt'+(val==='si'?' sel-yes':'');document.getElementById('yn3-no').className='yn-opt'+(val==='no'?' sel-no':'');document.getElementById('qb3').classList.add('answered');if(!scoreData._yn3){scoreData._yn3=true;answeredCount++;}updateDots();}
+function updateDots(){var t=Math.min(answeredCount,7);for(var i=1;i<=7;i++){var d=document.getElementById('qd'+i);if(d)d.classList.toggle('filled',i<=t);}document.getElementById('qp-lbl').textContent=t+' DE 7 PREGUNTAS';}
+function getTotal(){return['income_gross','income_net','quincenal','employment','debts','residence','references'].reduce(function(s,k){return s+(scoreData[k]?scoreData[k].pts:0);},0);}
+function fileSelected(wId,iId,nId){var f=document.getElementById(iId).files[0];if(f){document.getElementById(wId).classList.add('has-file');document.getElementById(nId).textContent='✓ '+f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';}}
+
+// ══════════════════════════════════════════════════════════════════
+// COMPRESION DE IMAGENES ANTES DE ENVIAR
+// ──────────────────────────────────────────────────────────────────
+// Una foto de celular pesa entre 3 y 8 MB. Cuatro documentos pueden
+// sumar 30 MB y el servidor rechaza el envio antes de que el workflow
+// siquiera arranque (413 Payload Too Large): el cliente veia
+// "No pudimos registrar tu solicitud" y el lead se perdia.
+//
+// Una cedula se lee perfecto a 1600px. Esto la baja a ~250 KB.
+// Los PDF pasan intactos (no se pueden redibujar en canvas).
+// Si algo falla al comprimir, se envia el archivo ORIGINAL: la
+// compresion nunca debe ser la razon de que se pierda una solicitud.
+// ══════════════════════════════════════════════════════════════════
+var MAX_LADO = 1600;          // px del lado mas largo
+var CALIDAD  = 0.78;          // JPEG
+var MAX_DOC_MB = 8;           // tope por archivo: ahora cada uno viaja solo
+
+function comprimirImagen(file){
+  return new Promise(function(resolve){
+    if(!file || !file.type || file.type.indexOf('image/') !== 0) return resolve(file);
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    var listo = false;
+    // Si el navegador no puede decodificar el formato (HEIC viejo, por
+    // ejemplo) no nos quedamos colgados: a los 12s seguimos con el original.
+    var guarda = setTimeout(function(){ if(!listo){ listo=true; URL.revokeObjectURL(url); resolve(file); } }, 12000);
+    img.onload = function(){
+      if(listo) return; listo = true; clearTimeout(guarda);
+      try{
+        var w = img.naturalWidth, hh = img.naturalHeight;
+        if(!w || !hh){ URL.revokeObjectURL(url); return resolve(file); }
+        var esc = Math.min(1, MAX_LADO / Math.max(w, hh));
+        var cv = document.createElement('canvas');
+        cv.width = Math.round(w * esc); cv.height = Math.round(hh * esc);
+        var cx = cv.getContext('2d');
+        cx.fillStyle = '#FFFFFF'; cx.fillRect(0, 0, cv.width, cv.height);  // PNG con transparencia -> fondo blanco
+        cx.drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(function(blob){
+          URL.revokeObjectURL(url);
+          // Solo sirve si de verdad quedo mas liviano
+          if(!blob || blob.size >= file.size) return resolve(file);
+          var nombre = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+          try{ resolve(new File([blob], nombre, {type:'image/jpeg'})); }
+          catch(e){ blob.name = nombre; resolve(blob); }
+        }, 'image/jpeg', CALIDAD);
+      }catch(e){ URL.revokeObjectURL(url); resolve(file); }
+    };
+    img.onerror = function(){ if(listo) return; listo=true; clearTimeout(guarda); URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+async function doSubmit(){var consent=document.getElementById('consent');var ec=document.getElementById('err-consent');if(!consent.checked){ec.classList.add('on');return;}ec.classList.remove('on');showLoad('ENVIANDO TU SOLICITUD...');var fd=new FormData();['nombre','cedula','telefono','email','ciudad','barrio'].forEach(function(f){fd.append(f,document.getElementById(f).value);});var _d=desglose(parseInt(document.getElementById('vehiculo').value)||0);
+// vehiculo_monto = lo que FINANCIAMOS (topado). El valor comercial y la
+// cuota inicial viajan aparte para que queden registrados y salgan en la
+// carta de pre-aprobacion.
+fd.append('vehiculo_monto',_d.financiar);
+fd.append('vehiculo_valor_comercial',_d.valor);
+fd.append('cuota_inicial',_d.inicial);
+fd.append('vehiculo_modelo',document.getElementById('modelo').value.trim());
+fd.append('concesionario',document.getElementById('concesionario').value.trim());
+fd.append('vendedor',vendedorElegido());
+fd.append('vehiculo_uso',document.getElementById('uso').value);fd.append('periodicidad',document.getElementById('periodicidad').value);fd.append('score_total',getTotal());Object.keys(scoreData).forEach(function(k){if(k!=='_yn3')fd.append('score_'+k,scoreData[k].val);});['ref1n','ref1t','ref2n','ref2t'].forEach(function(f){fd.append(f,document.getElementById(f).value);});// Los documentos se optimizan antes de adjuntarlos
+var _docs=[['file-ced-f','cedula_frente'],['file-ced-b','cedula_reverso'],['file-ing','ingresos_file'],['file-dom','domicilio_file']];
+var _pendientes=_docs.filter(function(p){var i=document.getElementById(p[0]);return i&&i.files[0];});
+// Los archivos se comprimen ahora pero NO se adjuntan a este POST: se
+// guardan aparte y suben despues, de a uno, cuando el lead ya esta a salvo.
+docsPendientes=[];
+if(_pendientes.length){
+  setLoadMsg('OPTIMIZANDO TUS DOCUMENTOS...');
+  for(var _i=0;_i<_pendientes.length;_i++){
+    var _p=_pendientes[_i];
+    var _orig=document.getElementById(_p[0]).files[0];
+    var _fin=await comprimirImagen(_orig);
+    console.log('[vamo] '+_p[1]+': '+(_orig.size/1048576).toFixed(2)+' MB -> '+(_fin.size/1048576).toFixed(2)+' MB');
+    docsPendientes.push({campo:_p[1],etiqueta:ETIQUETA_DOC[_p[1]]||_p[1],archivo:_fin,nombre:_fin.name||_orig.name});
+  }
+}
+try{
+  var result=await enviarConReintentos(fd);
+  hideLoad();
+  borrarLeadGuardado();
+  showConf(result);
+  // El lead ya esta registrado. A partir de aqui nada puede perderlo.
+  subirDocumentos(result.creditId);
+}catch(err){
+  hideLoad();
+  console.error('[vamo] envio fallido:', err);
+  // El lead queda guardado en este navegador para reintentarlo solo
+  // cuando el cliente vuelva a abrir la pagina.
+  guardarLeadParaReintento(fd);
+  showError(err&&err.name==='AbortError', null, detalleDeError(err));
+}}
+
+// ══════════════════════════════════════════════════════════════════
+// ENVIO CON REINTENTOS
+// ──────────────────────────────────────────────────────────────────
+// Antes el formulario enviaba UNA sola vez. Si el pod de n8n estaba
+// reiniciandose en ese instante -- diez segundos bastan -- el fetch
+// lanzaba, el lead se perdia y el cliente veia un error, sin que
+// quedara ninguna ejecucion en n8n para saber que habia pasado.
+//
+// Reintentar cubre justo ese caso: un reinicio de pod dura segundos y
+// el segundo intento entra. Se reintenta solo cuando tiene sentido:
+//   si lanzo        -> no hubo respuesta (red, pod caido, DNS): SI
+//   404             -> el webhook aun no esta registrado tras reiniciar: SI
+//   429, 5xx        -> el servidor esta ocupado o fallo: SI
+//   otros 4xx       -> el request esta mal, reintentar no lo arregla: NO
+//   413             -> el cuerpo es muy grande, nunca va a cambiar: NO
+// ══════════════════════════════════════════════════════════════════
+var INTENTOS_ENVIO=4;
+var ESPERAS_ENVIO=[4000,10000,20000];   // entre intento 1-2, 2-3, 3-4
+var TIMEOUT_ENVIO=20000;                 // el cuerpo son ~3 KB: 20s es de sobra
+
+function esperar(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+function vaLaPenaReintentar(err){
+  if(!err) return false;
+  if(err.name==='AbortError') return true;        // se quedo colgado, puede ser el pod
+  if(err.httpStatus===undefined) return true;     // lanzo: nunca llego
+  if(err.httpStatus===413) return false;
+  if(err.httpStatus===404) return true;           // webhook no registrado todavia
+  if(err.httpStatus===429) return true;
+  if(err.httpStatus>=500) return true;
+  return false;                                    // 400, 401, 403...
+}
+
+async function enviarConReintentos(fd){
+  var ultimo=null;
+  for(var i=0;i<INTENTOS_ENVIO;i++){
+    if(i>0){
+      setLoadMsg('REINTENTANDO ('+(i+1)+' DE '+INTENTOS_ENVIO+')...');
+      await esperar(ESPERAS_ENVIO[i-1]||10000);
+    } else {
+      setLoadMsg('ENVIANDO TU SOLICITUD...');
+    }
+    try{
+      var ctrl=new AbortController();
+      var tmo=setTimeout(function(){ctrl.abort();},TIMEOUT_ENVIO);
+      var res;
+      try{ res=await fetch(N8N_WEBHOOK,{method:'POST',body:fd,signal:ctrl.signal}); }
+      finally{ clearTimeout(tmo); }
+      if(!res.ok){
+        var _cuerpo='';
+        try{ _cuerpo=(await res.text()).slice(0,300); }catch(e){}
+        console.error('[vamo] intento '+(i+1)+' respondio '+res.status, _cuerpo);
+        var _e=new Error('HTTP '+res.status); _e.httpStatus=res.status; _e.cuerpo=_cuerpo; throw _e;
+      }
+      var result=await res.json().catch(function(){return{};});
+      if(!result||!result.creditId){
+        var _e2=new Error('El servidor respondio sin ID de credito');
+        _e2.sinId=true; throw _e2;
+      }
+      if(i>0) console.log('[vamo] envio exitoso en el intento '+(i+1));
+      return result;
+    }catch(err){
+      ultimo=err;
+      ultimo.intentosUsados=i+1;
+      console.warn('[vamo] intento '+(i+1)+'/'+INTENTOS_ENVIO+' fallo:', err.name, err.message);
+      if(!vaLaPenaReintentar(err)) break;
+    }
+  }
+  throw ultimo||new Error('No se pudo enviar');
+}
+
+// El detalle tecnico se muestra al cliente en letra pequena. No es para
+// el: es para que cuando nos escriba por WhatsApp podamos saber que paso
+// sin tener que adivinar. La vez pasada no quedo ejecucion en n8n ni
+// rastro en el navegador, y nos costo una hora de deducciones.
+function detalleDeError(err){
+  if(!err) return '';
+  // Un 413 aqui ya no puede ser por documentos: desde que se separaron en
+  // dos fases, este envio son ~3 KB de texto. Si aparece, el problema esta
+  // en la configuracion del servidor, no en lo que mando el cliente.
+  if(err.httpStatus===413) return 'Detalle: el servidor rechazó el tamaño del envío (413). Es un problema de configuración, no tuyo. Menciónalo si nos escribes por WhatsApp.';
+  var partes=[];
+  if(err.httpStatus) partes.push('código '+err.httpStatus);
+  else if(err.name==='AbortError') partes.push('el servidor no respondió a tiempo');
+  else if(err.sinId) partes.push('el servidor respondió sin ID');
+  else partes.push('no se pudo conectar con el servidor');
+  if(err.name&&err.name!=='Error'&&err.name!=='AbortError') partes.push(err.name);
+  if(err.message&&err.message.indexOf('HTTP')!==0) partes.push(err.message.slice(0,80));
+  var n=err.intentosUsados||1;
+  partes.push(n===1?'1 intento':n+' intentos');
+  return 'Detalle: '+partes.join(' · ')+'. Menciónalo si nos escribes por WhatsApp.';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EL LEAD NO SE PIERDE AUNQUE n8n ESTE CAIDO
+// ──────────────────────────────────────────────────────────────────
+// Se guarda en este navegador. Si el cliente vuelve a abrir la pagina,
+// se le ofrece reenviarlo con un boton, sin volver a escribir nada.
+// ══════════════════════════════════════════════════════════════════
+var CLAVE_LEAD='vamo_lead_pendiente';
+
+function guardarLeadParaReintento(fd){
+  try{
+    var o={};
+    fd.forEach(function(v,k){ if(typeof v==='string') o[k]=v; });
+    localStorage.setItem(CLAVE_LEAD, JSON.stringify({cuando:Date.now(),datos:o}));
+  }catch(e){ /* modo privado o storage bloqueado: no es critico */ }
+}
+function borrarLeadGuardado(){ try{ localStorage.removeItem(CLAVE_LEAD); }catch(e){} }
+function leerLeadGuardado(){
+  try{
+    var s=localStorage.getItem(CLAVE_LEAD);
+    if(!s) return null;
+    var o=JSON.parse(s);
+    // Mas de 7 dias es un lead viejo: ya nos escribio por otro lado o se fue
+    if(!o||!o.datos||(Date.now()-(o.cuando||0))>7*86400000){ borrarLeadGuardado(); return null; }
+    return o;
+  }catch(e){ return null; }
+}
+
+async function reenviarLeadGuardado(){
+  var o=leerLeadGuardado();
+  if(!o) return;
+  var fd=new FormData();
+  Object.keys(o.datos).forEach(function(k){ fd.append(k,o.datos[k]); });
+  showLoad('REENVIANDO TU SOLICITUD...');
+  try{
+    var result=await enviarConReintentos(fd);
+    hideLoad(); borrarLeadGuardado();
+    var b=document.getElementById('lead-pendiente'); if(b)b.style.display='none';
+    showConf(result);
+  }catch(err){
+    hideLoad();
+    showError(false,'Seguimos sin poder registrar tu solicitud.',detalleDeError(err));
+  }
+}
+
+function avisarLeadPendiente(){
+  var o=leerLeadGuardado();
+  if(!o) return;
+  var nombre=(o.datos.nombre||'').split(' ')[0]||'';
+  var box=document.createElement('div');
+  box.id='lead-pendiente';
+  box.style.cssText='margin:16px;padding:16px 18px;border-radius:12px;'+
+    'background:rgba(242,107,69,.1);border:1px solid rgba(242,107,69,.4);'+
+    'color:#F0F3F6;font-size:13.5px;line-height:1.6;';
+  box.innerHTML='<b style="color:#F26B45">Tienes una solicitud sin enviar</b><br>'+
+    (nombre?'Hola '+nombre+'. ':'')+'La última vez no pudimos registrarla. '+
+    'Guardamos tus datos en este dispositivo: puedes reenviarla sin volver a escribir nada.'+
+    '<br><br><button type="button" onclick="reenviarLeadGuardado()" style="padding:10px 18px;'+
+    'border:0;border-radius:9px;background:#F26B45;color:#fff;font-weight:800;cursor:pointer">'+
+    'Reenviar mi solicitud</button>';
+  document.body.insertBefore(box,document.body.firstChild);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',avisarLeadPendiente);
+else avisarLeadPendiente();
+// ══════════════════════════════════════════════════════════════════
+// SUBIDA DE DOCUMENTOS (fase 2)
+// ──────────────────────────────────────────────────────────────────
+// Corre DESPUES de que el cliente ya vio su ID de solicitud. Sube un
+// archivo por request. Si uno falla, se le dice cual y se le ofrece
+// WhatsApp -- la solicitud sigue registrada.
+//
+// El reintento existe por una carrera real: el formulario le responde
+// al cliente antes de terminar de crear las carpetas de Drive. Si el
+// primer archivo llega antes que la carpeta, el servidor contesta
+// {ok:false, reintentar:true} y aqui se espera y se vuelve a intentar.
+// ══════════════════════════════════════════════════════════════════
+var ETIQUETA_DOC={cedula_frente:'Cédula (frente)',cedula_reverso:'Cédula (reverso)',
+  ingresos_file:'Comprobante de ingresos',domicilio_file:'Comprobante de domicilio'};
+var docsPendientes=[];
+// La ventana de espera tiene que cubrir lo que tarda el workflow en crear
+// la carpeta de Drive. Con 5 intentos cada 4s (20 segundos) se agotaba antes
+// y la carpeta quedaba vacia. Ahora son 12 x 5s = 60 segundos de margen.
+var MAX_INTENTOS_DOC=12;
+var ESPERA_DOC_MS=5000;
+// El primer intento no tiene sentido lanzarlo de inmediato: el formulario
+// acaba de responder y la carpeta todavia no existe. Se espera un momento
+// para no gastar un intento en un fallo seguro.
+var ESPERA_INICIAL_MS=3500;
+
+function dormir(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+function pintarDocs(estados){
+  var cont=document.getElementById('doc-prog-list');
+  var html='';
+  for(var i=0;i<estados.length;i++){
+    var e=estados[i];
+    var cls=e.estado==='ok'?'ok':(e.estado==='err'?'err':'');
+    var txt=e.estado==='ok'?'✓ recibido':(e.estado==='err'?'no se pudo':
+      (e.estado==='espera'?'en espera...':'subiendo...'));
+    html+='<div class="doc-line"><span>'+e.etiqueta+'</span><span class="dl-st '+cls+'">'+txt+'</span></div>';
+  }
+  cont.innerHTML=html;
+}
+
+async function subirUno(creditId,doc){
+  // Un archivo mas grande que esto no lo va a aceptar el servidor por mas
+  // que se reintente: se falla rapido y se le pide por WhatsApp.
+  if(doc.archivo && doc.archivo.size > MAX_DOC_MB*1048576){
+    console.error('[vamo] '+doc.campo+' pesa '+(doc.archivo.size/1048576).toFixed(1)+' MB, tope '+MAX_DOC_MB+' MB');
+    return false;
+  }
+  for(var intento=1;intento<=MAX_INTENTOS_DOC;intento++){
+    try{
+      var fd=new FormData();
+      fd.append('creditId',creditId);
+      fd.append('tipo',doc.campo);
+      fd.append('archivo',doc.archivo,doc.nombre);
+      var ctrl=new AbortController();
+      var tmo=setTimeout(function(){ctrl.abort();},60000);
+      var res=await fetch(N8N_WEBHOOK_DOCS,{method:'POST',body:fd,signal:ctrl.signal});
+      clearTimeout(tmo);
+      if(!res.ok){
+        console.error('[vamo] doc '+doc.campo+' HTTP '+res.status);
+        // 413/500 no se arreglan reintentando el mismo archivo
+        if(res.status===413) return false;
+        await dormir(ESPERA_DOC_MS); continue;
+      }
+      var j=await res.json().catch(function(){return{};});
+      if(j.ok){
+        var _n=document.getElementById('doc-prog-nota');
+        if(_n&&_n.textContent.indexOf('Preparando')===0)
+          _n.textContent='No cierres esta pantalla mientras terminan de subir. '+
+            'Tu solicitud ya quedó registrada.';
+        return true;
+      }
+      console.warn('[vamo] doc '+doc.campo+' no listo:',j.motivo);
+      if(!j.reintentar) return false;
+      await dormir(ESPERA_DOC_MS);
+    }catch(e){
+      console.error('[vamo] doc '+doc.campo,e);
+      await dormir(ESPERA_DOC_MS);
+    }
+  }
+  return false;
+}
+
+async function subirDocumentos(creditId){
+  if(!creditId||!docsPendientes.length) return;
+  var caja=document.getElementById('doc-prog');
+  caja.style.display='block';
+  var estados=docsPendientes.map(function(d){return {etiqueta:d.etiqueta,estado:'pend'};});
+  pintarDocs(estados);
+  document.getElementById('doc-prog-nota').textContent=
+    'Preparando tu carpeta segura. No cierres esta pantalla mientras terminan de subir; '+
+    'tu solicitud ya quedó registrada.';
+  await dormir(ESPERA_INICIAL_MS);
+  var fallidos=[];
+  for(var i=0;i<docsPendientes.length;i++){
+    for(var j=i+1;j<estados.length;j++) estados[j].estado='espera';
+    estados[i].estado='pend';
+    pintarDocs(estados);
+    var ok=await subirUno(creditId,docsPendientes[i]);
+    estados[i].estado=ok?'ok':'err';
+    if(!ok) fallidos.push(docsPendientes[i].etiqueta);
+    pintarDocs(estados);
+  }
+  var tag=document.getElementById('doc-prog-tag');
+  var nota=document.getElementById('doc-prog-nota');
+  if(!fallidos.length){
+    tag.textContent='Documentos recibidos';
+    nota.textContent='Ya tenemos todo. El equipo los revisa en 24–48 horas.';
+  }else{
+    tag.textContent='Faltan algunos documentos';
+    nota.innerHTML='No pudimos recibir: <strong>'+fallidos.join(', ')+'</strong>. '+
+      'Tu solicitud <strong>ya está registrada</strong>, así que no la vuelvas a enviar: '+
+      'mándanos esos archivos por WhatsApp y los adjuntamos a tu carpeta.';
+  }
+  docsPendientes=[];
+}
+
+function showConf(result){
+  // Solo se muestra un ID que el servidor haya confirmado. Antes, si el
+  // envio fallaba, se INVENTABA uno aleatorio (TG-2026-100 a 999) y se
+  // le mostraba al cliente como real: el cliente creia que habia
+  // aplicado y el lead nunca llegaba.
+  var creditId=result.creditId;
+  for(var i=1;i<=3;i++){var s=document.getElementById('s'+i);if(s)s.classList.remove('active');}
+  document.getElementById('btn-row').style.display='none';
+  var pw=document.querySelector('.prog-wrap');if(pw)pw.style.display='none';
+  var conf=document.getElementById('conf');conf.classList.add('active');conf.style.display='block';
+  document.getElementById('conf-id').textContent=creditId;
+  window.scrollTo(0,0);
+}
+// Arma un mensaje de WhatsApp con lo que el cliente ya lleno, para que el
+// lead llegue aunque el servidor no responda. Solo campos que el equipo
+// necesita para llamarlo y armar la solicitud a mano.
+function mensajeWAConDatos(){
+  function v(id){ var e=document.getElementById(id); return e&&e.value?e.value.toString().trim():''; }
+  var L=['Hola vamo, no pude enviar mi solicitud de crédito desde la página.',
+         'Les dejo mis datos por aquí:',''];
+  var campos=[['Nombre','nombre'],['Cédula','cedula'],['Teléfono','telefono'],
+              ['Correo','email'],['Ciudad','ciudad'],['Barrio','barrio'],
+              ['Modelo del vehículo','modelo'],['Concesionario','concesionario']];
+  for(var i=0;i<campos.length;i++){
+    var val=v(campos[i][1]);
+    if(val) L.push(campos[i][0]+': '+val);
+  }
+  // El valor del vehiculo pasa por desglose(), que ya calcula cuota inicial
+  // y monto a financiar. Se manda el valor comercial, que es lo que el
+  // cliente entiende.
+  var veh=parseInt(v('vehiculo'))||0;
+  if(veh>0) L.push('Valor del vehículo: $'+veh.toLocaleString('es-CO'));
+  var vend=(typeof vendedorElegido==='function')?vendedorElegido():'';
+  if(vend) L.push('Me atendió: '+vend);
+  return L.join('\n');
+}
+
+function showError(fueTimeout,msgPropio,detalle){
+  var msg = msgPropio ? msgPropio : (fueTimeout
+    ? 'Tu solicitud está tardando más de lo normal y no pudimos confirmarla.'
+    : 'No pudimos registrar tu solicitud.');
+  var box=document.getElementById('err-envio');
+  if(!box){
+    box=document.createElement('div');
+    box.id='err-envio';
+    box.style.cssText='margin:18px 0;padding:16px 18px;border-radius:12px;'+
+      'background:rgba(224,92,92,.1);border:1px solid rgba(224,92,92,.35);'+
+      'color:#F0F3F6;font-size:13.5px;line-height:1.6;';
+    var btn=document.getElementById('btn-row');
+    if(btn&&btn.parentNode)btn.parentNode.insertBefore(box,btn);
+    else document.body.appendChild(box);
+  }
+  // Los datos que ya lleno quedan en el formulario: puede reintentar
+  // sin volver a escribir todo. Y si falla de nuevo, tiene WhatsApp.
+  box.innerHTML='<b style="color:#E05C5C">'+msg+'</b><br>'+
+    'Tus datos siguen en el formulario. Intenta enviarlo de nuevo en unos minutos. '+
+    'Si el problema continúa, escríbenos por WhatsApp y te ayudamos a completarla.'+
+    (detalle?'<div style="margin-top:8px;font-size:12px;color:rgba(240,243,246,.6)">'+detalle+'</div>':'')+
+    '<br><br><a href="https://wa.me/'+WA_NUMBER+'?text='+encodeURIComponent(mensajeWAConDatos())+
+    '" target="_blank" style="display:inline-block;padding:11px 18px;border-radius:9px;'+
+    'background:#25D366;color:#fff;text-decoration:none;font-weight:800;">'+
+    'Enviar mis datos por WhatsApp</a>'+
+    '<div style="margin-top:8px;font-size:12px;color:rgba(240,243,246,.6)">'+
+    'El mensaje ya va escrito con tu información. Solo tienes que enviarlo.</div>';
+  box.style.display='block';
+  box.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function openWA(){var n=document.getElementById('nombre').value||'';var msg=encodeURIComponent('Hola vamo, acabo de enviar mi solicitud de crédito. Mi nombre es '+n+'. ¿Cuándo me dan respuesta?');window.open('https://wa.me/'+WA_NUMBER+'?text='+msg,'_blank');}
+function showLoad(m){document.getElementById('loading').classList.add('on');document.getElementById('load-msg').textContent=m;}
+function setLoadMsg(m){document.getElementById('load-msg').textContent=m;}
+function hideLoad(){document.getElementById('loading').classList.remove('on');}
+</script>
 </body>
 </html>
