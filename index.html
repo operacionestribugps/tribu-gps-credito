@@ -46,6 +46,14 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
 .opt-blue{background:linear-gradient(135deg,rgba(79,195,184,.08),rgba(79,195,184,.02));border-color:var(--blue-border);}
 .opt-blue:hover{border-color:var(--blue);box-shadow:0 8px 28px rgba(79,195,184,.15);}
 
+/* Tarjeta del equipo: mismo formato que las demas pero en gris, para que
+   no compita visualmente con las dos acciones de cliente que son el
+   objetivo de la pagina. */
+.opt-team{background:linear-gradient(135deg,rgba(255,255,255,.035),rgba(255,255,255,.012));border-color:var(--b2);}
+.opt-team:hover{border-color:var(--muted);box-shadow:0 8px 28px rgba(0,0,0,.35);}
+.opt-team .opt-cta{color:var(--muted);}
+.opt-team .opt-title{color:var(--muted);}
+
 .opt-icon{font-size:30px;margin-bottom:14px;display:block;}
 .opt-title{font-size:18px;font-weight:900;letter-spacing:-.3px;margin-bottom:6px;color:var(--wh);}
 .opt-desc{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:16px;}
@@ -110,6 +118,22 @@ body{background:var(--bg);font-family:'Roboto',sans-serif;color:var(--wh);min-he
       <div class="opt-title">Ver mi portafolio</div>
       <div class="opt-desc">Revisa los vehículos que financiaste, cuánto has recuperado y cómo va cada crédito.</div>
       <span class="opt-cta">Entrar al portafolio <span class="opt-cta-arrow">→</span></span>
+    </a>
+
+    <div class="divider-or"><span>o si eres del equipo vamo</span></div>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         ACCESO AL PANEL ADMINISTRATIVO
+
+         Si el panel quedo en otro proyecto de Vercel (otro dominio),
+         cambia el href de aqui abajo por la URL completa. Es la unica
+         referencia al panel en todo el sitio.
+         ══════════════════════════════════════════════════════════════ -->
+    <a href="vamo-super-admin.html" class="option-card opt-team">
+      <span class="opt-icon">🔐</span>
+      <div class="opt-title">Panel administrativo</div>
+      <div class="opt-desc">Cartera colocada, pagos recibidos, inversionistas y alertas de mora. Acceso con clave.</div>
+      <span class="opt-cta">Entrar al panel <span class="opt-cta-arrow">→</span></span>
     </a>
 
     <div class="bottom-info">
